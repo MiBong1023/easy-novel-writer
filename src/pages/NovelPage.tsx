@@ -1,0 +1,153 @@
+import { useEffect, useState } from 'react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+  query,
+  orderBy,
+  serverTimestamp,
+  getDoc,
+  updateDoc,
+} from 'firebase/firestore'
+import { db } from '@/lib/firebase'
+import { useAuth } from '@/hooks/useAuth'
+import type { Episode, Novel } from '@/types'
+
+export default function NovelPage() {
+  const { novelId } = useParams<{ novelId: string }>()
+  const { user, loading } = useAuth()
+  const navigate = useNavigate()
+  const [novel, setNovel] = useState<Novel | null>(null)
+  const [episodes, setEpisodes] = useState<Episode[]>([])
+  const [creating, setCreating] = useState(false)
+  const [epTitle, setEpTitle] = useState('')
+
+  useEffect(() => {
+    if (!user || !novelId) return
+    const novelRef = doc(db, 'users', user.uid, 'novels', novelId)
+    getDoc(novelRef).then((snap) => {
+      if (!snap.exists()) return
+      setNovel({ id: snap.id, ...(snap.data() as Omit<Novel, 'id'>), createdAt: snap.data().createdAt?.toDate() ?? new Date(), updatedAt: snap.data().updatedAt?.toDate() ?? new Date() })
+    })
+    const epRef = collection(db, 'users', user.uid, 'novels', novelId, 'episodes')
+    getDocs(query(epRef, orderBy('order', 'asc'))).then((snap) => {
+      setEpisodes(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Episode, 'id'>), createdAt: d.data().createdAt?.toDate() ?? new Date(), updatedAt: d.data().updatedAt?.toDate() ?? new Date() })))
+    })
+  }, [user, novelId])
+
+  async function handleCreateEpisode(e: React.FormEvent) {
+    e.preventDefault()
+    if (!user || !novelId || !epTitle.trim()) return
+    const epRef = collection(db, 'users', user.uid, 'novels', novelId, 'episodes')
+    const ref = await addDoc(epRef, {
+      novelId,
+      title: epTitle.trim(),
+      content: '',
+      order: episodes.length + 1,
+      charCount: 0,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    await updateDoc(doc(db, 'users', user.uid, 'novels', novelId), {
+      episodeCount: episodes.length + 1,
+      updatedAt: serverTimestamp(),
+    })
+    navigate(`/novels/${novelId}/episodes/${ref.id}`)
+  }
+
+  async function handleDeleteEpisode(epId: string) {
+    if (!user || !novelId || !window.confirm('회차를 삭제할까요?')) return
+    await deleteDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', epId))
+    setEpisodes((prev) => prev.filter((ep) => ep.id !== epId))
+  }
+
+  if (loading || !novel) {
+    return <div className="flex h-screen items-center justify-center text-gray-400">로딩 중…</div>
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <header className="border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-800 dark:bg-gray-900">
+        <div className="mx-auto flex max-w-2xl items-center gap-3">
+          <Link to="/" className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+            ← 목록
+          </Link>
+          <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate">{novel.title}</h1>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-2xl p-6">
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="font-semibold text-gray-700 dark:text-gray-300">회차 목록</h2>
+          <button
+            onClick={() => setCreating(true)}
+            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+          >
+            + 새 회차
+          </button>
+        </div>
+
+        {creating && (
+          <form onSubmit={handleCreateEpisode} className="mb-4 flex gap-2">
+            <input
+              autoFocus
+              required
+              placeholder="회차 제목"
+              value={epTitle}
+              onChange={(e) => setEpTitle(e.target.value)}
+              className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+            />
+            <button
+              type="submit"
+              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+            >
+              만들기
+            </button>
+            <button
+              type="button"
+              onClick={() => setCreating(false)}
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-50 dark:border-gray-600"
+            >
+              취소
+            </button>
+          </form>
+        )}
+
+        {episodes.length === 0 ? (
+          <div className="mt-16 text-center text-gray-400 dark:text-gray-600">
+            <p className="text-3xl mb-3">✍️</p>
+            <p>아직 회차가 없어요. 첫 회차를 만들어보세요!</p>
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {episodes.map((ep) => (
+              <li
+                key={ep.id}
+                className="group flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800"
+              >
+                <Link
+                  to={`/novels/${novelId}/episodes/${ep.id}`}
+                  className="flex-1 min-w-0"
+                >
+                  <span className="text-xs text-gray-400 dark:text-gray-500 mr-2">{ep.order}화</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-200">{ep.title}</span>
+                  <span className="ml-2 text-xs text-gray-400">{ep.charCount.toLocaleString()}자</span>
+                </Link>
+                <button
+                  onClick={() => handleDeleteEpisode(ep.id)}
+                  className="ml-2 rounded p-1 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-red-500 dark:text-gray-600"
+                  aria-label="삭제"
+                >
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </main>
+    </div>
+  )
+}
