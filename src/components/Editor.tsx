@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import { useEditor } from '@/hooks/useEditor'
 import { useWordCount } from '@/hooks/useWordCount'
@@ -25,24 +25,13 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
   const { goal, setGoal } = useGoal(episodeId)
   const { count, countNoSpace, percent } = useWordCount(value, goal)
   const saveStatus = useAutoSave(novelId, episodeId, value, userId)
+  // window Cmd+F 리스너는 useFindReplace 내부에서 등록
   const fr = useFindReplace(value, (v) => { setValue(v); onContentChange?.(v) }, ref)
 
-  // Cmd/Ctrl+F → 찾기 패널 열기
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
-        e.preventDefault()
-        fr.open ? fr.handleClose() : fr.handleOpen()
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [fr])
-
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // textarea에 포커스가 있을 때 Cmd+F는 window 리스너가 처리하므로 기본 동작만 막음
     if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
       e.preventDefault()
-      fr.open ? fr.handleClose() : fr.handleOpen()
       return
     }
     editorKeyDown(e)
