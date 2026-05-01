@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/hooks/useAuth'
+import AuthButton from '@/components/AuthButton'
 import type { Episode, Novel } from '@/types'
 
 export default function NovelPage() {
@@ -75,7 +76,8 @@ export default function NovelPage() {
           <Link to="/" className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
             ← 목록
           </Link>
-          <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100 truncate">{novel.title}</h1>
+          <h1 className="flex-1 truncate text-lg font-bold text-gray-800 dark:text-gray-100">{novel.title}</h1>
+          {user && <AuthButton user={user} />}
         </div>
       </header>
 

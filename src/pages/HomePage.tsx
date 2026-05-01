@@ -13,6 +13,7 @@ import {
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import NovelCard from '@/components/NovelCard'
+import AuthButton from '@/components/AuthButton'
 import type { Novel } from '@/types'
 
 export default function HomePage() {
@@ -78,12 +79,15 @@ export default function HomePage() {
       <header className="border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-800 dark:bg-gray-900">
         <div className="mx-auto flex max-w-4xl items-center justify-between">
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">쉬운 소설 작가</h1>
-          <button
-            onClick={() => setCreating(true)}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 active:scale-95"
-          >
-            + 새 작품
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCreating(true)}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 active:scale-95"
+            >
+              + 새 작품
+            </button>
+            {user && <AuthButton user={user} />}
+          </div>
         </div>
       </header>
 
