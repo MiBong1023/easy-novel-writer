@@ -16,7 +16,7 @@ import NovelCard from '@/components/NovelCard'
 import type { Novel } from '@/types'
 
 export default function HomePage() {
-  const { user, loading } = useAuth()
+  const { user, loading, authError } = useAuth()
   const [novels, setNovels] = useState<Novel[]>([])
   const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState('')
@@ -55,9 +55,10 @@ export default function HomePage() {
       })
       navigate(`/novels/${ref.id}`)
     } catch (err) {
+      const code = (err as { code?: string }).code ?? 'unknown'
       const msg = err instanceof Error ? err.message : String(err)
-      setError(msg)
-      console.error('작품 생성 실패:', err)
+      setError(`[${code}] ${msg}`)
+      console.error('작품 생성 실패 | user:', user?.uid, '| error:', err)
     }
   }
 
@@ -69,6 +70,10 @@ export default function HomePage() {
 
   if (loading) {
     return <div className="flex h-screen items-center justify-center text-gray-400">로딩 중…</div>
+  }
+
+  if (authError) {
+    return <div className="flex h-screen items-center justify-center text-red-500">{authError}</div>
   }
 
   return (
