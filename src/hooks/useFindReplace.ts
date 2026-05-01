@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 export function useFindReplace(
   value: string,
@@ -11,7 +11,6 @@ export function useFindReplace(
   const matchIndexRef = useRef(0)
   const openRef = useRef(false)
 
-  // openRef는 항상 최신 open 값을 가리킴 — 윈도우 리스너 stale closure 방지
   function setOpen(v: boolean) {
     openRef.current = v
     setOpenState(v)
@@ -27,7 +26,6 @@ export function useFindReplace(
     textareaRef.current?.focus()
   }, [textareaRef])
 
-  // 윈도우 단위 Cmd/Ctrl+F 단 한 번만 등록
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
@@ -37,10 +35,11 @@ export function useFindReplace(
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [handleOpen, handleClose]) // stable refs → 한 번만 등록
+  }, [handleOpen, handleClose])
 
-  const getMatches = useCallback(() => {
-    if (!query) return []
+  // useMemo로 매 렌더마다 최신 value/query 기준으로 계산
+  const matches = useMemo(() => {
+    if (!query) return [] as number[]
     const results: number[] = []
     let i = value.indexOf(query)
     while (i !== -1) {
@@ -52,7 +51,7 @@ export function useFindReplace(
 
   function selectMatch(index: number) {
     const ta = textareaRef.current
-    if (!ta || !query) return
+    if (!ta) return
     ta.focus()
     ta.setSelectionRange(index, index + query.length)
     const lineHeight = parseInt(getComputedStyle(ta).lineHeight) || 24
@@ -61,19 +60,17 @@ export function useFindReplace(
   }
 
   function findNext() {
-    const list = getMatches()
-    if (!list.length) return
-    const idx = matchIndexRef.current % list.length
-    selectMatch(list[idx])
-    matchIndexRef.current = (idx + 1) % list.length
+    if (!matches.length) return
+    const idx = matchIndexRef.current % matches.length
+    selectMatch(matches[idx])
+    matchIndexRef.current = (idx + 1) % matches.length
   }
 
   function findPrev() {
-    const list = getMatches()
-    if (!list.length) return
-    const idx = (matchIndexRef.current - 2 + list.length) % list.length
-    selectMatch(list[idx])
-    matchIndexRef.current = (idx + 1) % list.length
+    if (!matches.length) return
+    const idx = (matchIndexRef.current - 2 + matches.length) % matches.length
+    selectMatch(matches[idx])
+    matchIndexRef.current = (idx + 1) % matches.length
   }
 
   function replaceCurrent() {
@@ -82,8 +79,7 @@ export function useFindReplace(
     const start = ta.selectionStart
     const end = ta.selectionEnd
     if (value.slice(start, end) === query) {
-      const next = value.slice(0, start) + replacement + value.slice(end)
-      onChange(next)
+      onChange(value.slice(0, start) + replacement + value.slice(end))
       requestAnimationFrame(() => {
         ta.setSelectionRange(start, start + replacement.length)
       })
@@ -93,7 +89,7 @@ export function useFindReplace(
   }
 
   function replaceAll() {
-    if (!query) return
+    if (!query || !matches.length) return
     onChange(value.split(query).join(replacement))
     matchIndexRef.current = 0
   }
@@ -102,7 +98,7 @@ export function useFindReplace(
     open, handleOpen, handleClose,
     query, setQuery,
     replacement, setReplacement,
-    matchCount: getMatches().length,
+    matchCount: matches.length,
     findNext, findPrev,
     replaceCurrent, replaceAll,
   }

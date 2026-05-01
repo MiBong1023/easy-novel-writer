@@ -28,6 +28,8 @@ export default function FindReplacePanel({
   }, [])
 
   function handleKeyDown(e: React.KeyboardEvent) {
+    // 한국어 IME 조합 중에는 키 이벤트를 가로채지 않음
+    if (e.nativeEvent.isComposing) return
     if (e.key === 'Escape') onClose()
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onFindNext() }
     if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); onFindPrev() }
@@ -58,7 +60,7 @@ export default function FindReplacePanel({
             placeholder="찾기"
             className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
           />
-          <span className="shrink-0 text-xs text-gray-400 w-10 text-right">
+          <span className="w-10 shrink-0 text-right text-xs text-gray-400">
             {query ? `${matchCount}개` : ''}
           </span>
         </div>
@@ -73,13 +75,13 @@ export default function FindReplacePanel({
 
         {/* 버튼 */}
         <div className="flex flex-wrap gap-1.5">
-          <button onClick={onFindPrev} className="btn-secondary text-xs">← 이전</button>
-          <button onClick={onFindNext} className="btn-secondary text-xs">다음 →</button>
-          <button onClick={onReplace} className="btn-secondary text-xs">바꾸기</button>
+          <button onClick={onFindPrev} disabled={!matchCount} className="btn-secondary text-xs disabled:opacity-40">← 이전</button>
+          <button onClick={onFindNext} disabled={!matchCount} className="btn-secondary text-xs disabled:opacity-40">다음 →</button>
+          <button onClick={onReplace} disabled={!matchCount} className="btn-secondary text-xs disabled:opacity-40">바꾸기</button>
           <button
             onClick={onReplaceAll}
-            className="rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-40"
             disabled={!query || matchCount === 0}
+            className="rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-40"
           >
             전체 바꾸기
           </button>
