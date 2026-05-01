@@ -22,6 +22,7 @@ export default function FindReplacePanel({
   onClose,
 }: Props) {
   const findRef = useRef<HTMLInputElement>(null)
+  const replaceRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     findRef.current?.focus()
@@ -30,14 +31,27 @@ export default function FindReplacePanel({
   function onFindKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.nativeEvent.isComposing) return
     if (e.key === 'Escape') { e.preventDefault(); onClose(); return }
-    if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); onFindPrev(); return }
-    if (e.key === 'Enter') { e.preventDefault(); onFindNext() }
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      if (e.shiftKey) {
+        onFindPrev()
+      } else {
+        onFindNext()
+      }
+      // textarea가 포커스를 가져가므로 즉시 되돌림
+      requestAnimationFrame(() => findRef.current?.focus())
+    }
   }
 
   function onReplaceKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.nativeEvent.isComposing) return
     if (e.key === 'Escape') { e.preventDefault(); onClose(); return }
-    if (e.key === 'Enter') { e.preventDefault(); onReplace() }
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      onReplace()
+      // replaceCurrent 내부 RAF(textarea 선택) 이후에 replace 입력창으로 복귀
+      requestAnimationFrame(() => requestAnimationFrame(() => replaceRef.current?.focus()))
+    }
   }
 
   return (
@@ -53,14 +67,14 @@ export default function FindReplacePanel({
       </div>
 
       <div className="flex flex-col gap-2 p-3">
-        {/* 찾기 */}
+        {/* 찾기 — Enter: 다음, Shift+Enter: 이전 */}
         <div className="flex items-center gap-2">
           <input
             ref={findRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onFindKeyDown}
-            placeholder="찾기"
+            placeholder="찾기 (Enter: 다음, Shift+Enter: 이전)"
             className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
           />
           <span className="w-10 shrink-0 text-right text-xs text-gray-400">
@@ -68,16 +82,15 @@ export default function FindReplacePanel({
           </span>
         </div>
 
-        {/* 바꾸기 — Enter로 바꾸기 실행 */}
-        <div className="relative">
-          <input
-            value={replacement}
-            onChange={(e) => setReplacement(e.target.value)}
-            onKeyDown={onReplaceKeyDown}
-            placeholder="바꿀 내용 (Enter로 바꾸기)"
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-          />
-        </div>
+        {/* 바꾸기 — Enter: 바꾸기 + 다음으로 이동 */}
+        <input
+          ref={replaceRef}
+          value={replacement}
+          onChange={(e) => setReplacement(e.target.value)}
+          onKeyDown={onReplaceKeyDown}
+          placeholder="바꿀 내용 (Enter: 바꾸기)"
+          className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+        />
 
         {/* 버튼 */}
         <div className="flex flex-wrap gap-1.5">
