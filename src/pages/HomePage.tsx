@@ -21,6 +21,7 @@ export default function HomePage() {
   const [creating, setCreating] = useState(false)
   const [title, setTitle] = useState('')
   const [desc, setDesc] = useState('')
+  const [error, setError] = useState('')
   const navigate = useNavigate()
 
   const novelsRef = user ? collection(db, 'users', user.uid, 'novels') : null
@@ -41,16 +42,23 @@ export default function HomePage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
+    setError('')
     if (!novelsRef || !title.trim()) return
-    const ref = await addDoc(novelsRef, {
-      title: title.trim(),
-      description: desc.trim(),
-      userId: user!.uid,
-      episodeCount: 0,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
-    navigate(`/novels/${ref.id}`)
+    try {
+      const ref = await addDoc(novelsRef, {
+        title: title.trim(),
+        description: desc.trim(),
+        userId: user!.uid,
+        episodeCount: 0,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+      navigate(`/novels/${ref.id}`)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setError(msg)
+      console.error('작품 생성 실패:', err)
+    }
   }
 
   async function handleDelete(id: string) {
@@ -99,6 +107,11 @@ export default function HomePage() {
               rows={2}
               className="mb-4 w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
             />
+            {error && (
+              <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-400">
+                {error}
+              </p>
+            )}
             <div className="flex gap-2">
               <button
                 type="submit"
