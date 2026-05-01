@@ -21,25 +21,27 @@ export default function FindReplacePanel({
   onReplace, onReplaceAll,
   onClose,
 }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null)
+  const findRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    inputRef.current?.focus()
+    findRef.current?.focus()
   }, [])
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    // 한국어 IME 조합 중에는 키 이벤트를 가로채지 않음
+  function onFindKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.nativeEvent.isComposing) return
-    if (e.key === 'Escape') onClose()
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onFindNext() }
-    if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); onFindPrev() }
+    if (e.key === 'Escape') { e.preventDefault(); onClose(); return }
+    if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); onFindPrev(); return }
+    if (e.key === 'Enter') { e.preventDefault(); onFindNext() }
+  }
+
+  function onReplaceKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.nativeEvent.isComposing) return
+    if (e.key === 'Escape') { e.preventDefault(); onClose(); return }
+    if (e.key === 'Enter') { e.preventDefault(); onReplace() }
   }
 
   return (
-    <div
-      className="absolute right-4 top-2 z-20 w-80 rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900"
-      onKeyDown={handleKeyDown}
-    >
+    <div className="absolute right-4 top-2 z-20 w-80 rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-900">
       <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2 dark:border-gray-700">
         <span className="text-xs font-medium text-gray-500 dark:text-gray-400">찾기 / 바꾸기</span>
         <button
@@ -54,9 +56,10 @@ export default function FindReplacePanel({
         {/* 찾기 */}
         <div className="flex items-center gap-2">
           <input
-            ref={inputRef}
+            ref={findRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onFindKeyDown}
             placeholder="찾기"
             className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
           />
@@ -65,13 +68,16 @@ export default function FindReplacePanel({
           </span>
         </div>
 
-        {/* 바꾸기 */}
-        <input
-          value={replacement}
-          onChange={(e) => setReplacement(e.target.value)}
-          placeholder="바꿀 내용"
-          className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-        />
+        {/* 바꾸기 — Enter로 바꾸기 실행 */}
+        <div className="relative">
+          <input
+            value={replacement}
+            onChange={(e) => setReplacement(e.target.value)}
+            onKeyDown={onReplaceKeyDown}
+            placeholder="바꿀 내용 (Enter로 바꾸기)"
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+          />
+        </div>
 
         {/* 버튼 */}
         <div className="flex flex-wrap gap-1.5">

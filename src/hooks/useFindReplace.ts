@@ -37,7 +37,6 @@ export function useFindReplace(
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [handleOpen, handleClose])
 
-  // useMemo로 매 렌더마다 최신 value/query 기준으로 계산
   const matches = useMemo(() => {
     if (!query) return [] as number[]
     const results: number[] = []
@@ -49,43 +48,67 @@ export function useFindReplace(
     return results
   }, [value, query])
 
-  function selectMatch(index: number) {
+  function selectAt(list: number[], idx: number) {
     const ta = textareaRef.current
-    if (!ta) return
+    if (!ta || !list.length) return
+    const pos = list[idx]
     ta.focus()
-    ta.setSelectionRange(index, index + query.length)
+    ta.setSelectionRange(pos, pos + query.length)
     const lineHeight = parseInt(getComputedStyle(ta).lineHeight) || 24
-    const lines = value.slice(0, index).split('\n').length
+    const lines = value.slice(0, pos).split('\n').length
     ta.scrollTop = (lines - 3) * lineHeight
   }
 
   function findNext() {
     if (!matches.length) return
     const idx = matchIndexRef.current % matches.length
-    selectMatch(matches[idx])
+    selectAt(matches, idx)
     matchIndexRef.current = (idx + 1) % matches.length
   }
 
   function findPrev() {
     if (!matches.length) return
     const idx = (matchIndexRef.current - 2 + matches.length) % matches.length
-    selectMatch(matches[idx])
+    selectAt(matches, idx)
     matchIndexRef.current = (idx + 1) % matches.length
   }
 
+  // 바꾸기 후 새 텍스트 기준으로 다음 매칭 자동 선택
   function replaceCurrent() {
     const ta = textareaRef.current
     if (!ta || !query) return
     const start = ta.selectionStart
     const end = ta.selectionEnd
-    if (value.slice(start, end) === query) {
-      onChange(value.slice(0, start) + replacement + value.slice(end))
-      requestAnimationFrame(() => {
-        ta.setSelectionRange(start, start + replacement.length)
-      })
-    } else {
-      findNext()
+    const isMatch = value.slice(start, end) === query
+
+    const newValue = isMatch
+      ? value.slice(0, start) + replacement + value.slice(end)
+      : value
+    if (isMatch) onChange(newValue)
+
+    // 바꾼 위치 이후의 다음 매칭을 새 텍스트에서 계산
+    const searchFrom = isMatch ? start + replacement.length : start + query.length
+    const nextMatches: number[] = []
+    let i = newValue.indexOf(query)
+    while (i !== -1) {
+      nextMatches.push(i)
+      i = newValue.indexOf(query, i + 1)
     }
+
+    if (!nextMatches.length) {
+      matchIndexRef.current = 0
+      return
+    }
+
+    let nextIdx = nextMatches.findIndex((m) => m >= searchFrom)
+    if (nextIdx === -1) nextIdx = 0
+    matchIndexRef.current = (nextIdx + 1) % nextMatches.length
+
+    requestAnimationFrame(() => {
+      const pos = nextMatches[nextIdx]
+      ta.focus()
+      ta.setSelectionRange(pos, pos + query.length)
+    })
   }
 
   function replaceAll() {
