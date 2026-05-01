@@ -54,11 +54,8 @@ export default function HomePage() {
         updatedAt: serverTimestamp(),
       })
       navigate(`/novels/${ref.id}`)
-    } catch (err) {
-      const code = (err as { code?: string }).code ?? 'unknown'
-      const msg = err instanceof Error ? err.message : String(err)
-      setError(`[${code}] ${msg}`)
-      console.error('작품 생성 실패 | user:', user?.uid, '| error:', err)
+    } catch {
+      setError('작품 생성에 실패했습니다. 다시 시도해주세요.')
     }
   }
 

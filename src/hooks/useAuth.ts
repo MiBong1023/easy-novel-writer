@@ -9,7 +9,6 @@ export function useAuth() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
-        console.log('Auth OK — uid:', u.uid, 'isAnon:', u.isAnonymous)
         setUser(u)
         setLoading(false)
       } else {
@@ -18,8 +17,7 @@ export function useAuth() {
           setUser(anon)
         } catch (err) {
           const code = (err as { code?: string }).code ?? 'unknown'
-          console.error('익명 로그인 실패:', err)
-          setAuthError(`익명 로그인 실패 [${code}]`)
+          setAuthError(`로그인에 실패했습니다 [${code}]`)
         }
         setLoading(false)
       }
