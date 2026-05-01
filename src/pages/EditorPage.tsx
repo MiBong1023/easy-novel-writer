@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -13,17 +13,37 @@ export default function EditorPage() {
   const { user, loading } = useAuth()
   const [episode, setEpisode] = useState<Episode | null>(null)
   const [fetching, setFetching] = useState(true)
+  const contentRef = useRef('')
 
   useEffect(() => {
     if (!user || !novelId || !episodeId) return
     const ref = doc(db, 'users', user.uid, 'novels', novelId, 'episodes', episodeId)
     getDoc(ref).then((snap) => {
       if (snap.exists()) {
-        setEpisode({ id: snap.id, ...(snap.data() as Omit<Episode, 'id'>), createdAt: snap.data().createdAt?.toDate() ?? new Date(), updatedAt: snap.data().updatedAt?.toDate() ?? new Date() })
+        const data = snap.data()
+        const ep: Episode = {
+          id: snap.id,
+          ...(data as Omit<Episode, 'id'>),
+          createdAt: data.createdAt?.toDate() ?? new Date(),
+          updatedAt: data.updatedAt?.toDate() ?? new Date(),
+        }
+        setEpisode(ep)
+        contentRef.current = ep.content
       }
       setFetching(false)
     })
   }, [user, novelId, episodeId])
+
+  function handleExport() {
+    if (!episode) return
+    const blob = new Blob([contentRef.current], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${episode.title}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   if (loading || fetching) {
     return <div className="flex h-screen items-center justify-center text-gray-400">로딩 중…</div>
@@ -35,7 +55,7 @@ export default function EditorPage() {
 
   return (
     <div className="flex h-screen flex-col bg-white dark:bg-gray-950">
-      <header className="flex shrink-0 items-center gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
+      <header className="flex shrink-0 items-center gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
         <Link
           to={`/novels/${novelId}`}
           className="text-sm text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
@@ -45,6 +65,13 @@ export default function EditorPage() {
         <span className="flex-1 truncate text-sm font-medium text-gray-700 dark:text-gray-300">
           {episode.title}
         </span>
+        <button
+          onClick={handleExport}
+          title="txt로 내보내기"
+          className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+        >
+          ↓ txt
+        </button>
         <DarkModeToggle />
         <AuthButton user={user} />
       </header>
@@ -54,6 +81,7 @@ export default function EditorPage() {
           episodeId={episodeId}
           initialContent={episode.content}
           userId={user.uid}
+          onContentChange={(v) => { contentRef.current = v }}
         />
       </div>
     </div>

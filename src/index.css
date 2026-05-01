@@ -2,6 +2,12 @@
 
 @variant dark (&:where(.dark, .dark *));
 
+@layer components {
+  .btn-secondary {
+    @apply rounded-lg border border-gray-200 px-2.5 py-1 text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800;
+  }
+}
+
 @layer base {
   html {
     @apply antialiased;

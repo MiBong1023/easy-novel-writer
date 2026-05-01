@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 interface Props {
   count: number
+  countNoSpace: number
   goal: number
   percent: number
   saveStatus: 'idle' | 'saving' | 'saved' | 'error'
@@ -15,7 +16,7 @@ const STATUS_TEXT: Record<Props['saveStatus'], string> = {
   error: '저장 실패',
 }
 
-export default function ProgressBar({ count, goal, percent, saveStatus, onGoalChange }: Props) {
+export default function ProgressBar({ count, countNoSpace, goal, percent, saveStatus, onGoalChange }: Props) {
   const [editing, setEditing] = useState(false)
   const [input, setInput] = useState(String(goal))
 
@@ -35,7 +36,7 @@ export default function ProgressBar({ count, goal, percent, saveStatus, onGoalCh
   return (
     <div className="flex flex-col gap-1 border-b border-gray-200 px-4 py-2 dark:border-gray-700">
       <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-        <span className="flex items-center gap-1">
+        <span className="flex items-center gap-1 flex-wrap">
           {count.toLocaleString()} /&nbsp;
           {editing ? (
             <form onSubmit={handleSubmit} className="inline">
@@ -58,6 +59,8 @@ export default function ProgressBar({ count, goal, percent, saveStatus, onGoalCh
             </button>
           )}
           &nbsp;자 ({percent}%)
+          <span className="text-gray-300 dark:text-gray-600 mx-1">·</span>
+          <span className="text-gray-400 dark:text-gray-500">공백 제외 {countNoSpace.toLocaleString()}자</span>
         </span>
         <span className={saveStatus === 'error' ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'}>
           {STATUS_TEXT[saveStatus]}
