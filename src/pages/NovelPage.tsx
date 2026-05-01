@@ -15,6 +15,7 @@ import {
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import AuthButton from '@/components/AuthButton'
+import DarkModeToggle from '@/components/DarkModeToggle'
 import type { Episode, Novel } from '@/types'
 
 export default function NovelPage() {
@@ -77,6 +78,7 @@ export default function NovelPage() {
             ← 목록
           </Link>
           <h1 className="flex-1 truncate text-lg font-bold text-gray-800 dark:text-gray-100">{novel.title}</h1>
+          <DarkModeToggle />
           {user && <AuthButton user={user} />}
         </div>
       </header>

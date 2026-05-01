@@ -5,6 +5,7 @@ import { db } from '@/lib/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import Editor from '@/components/Editor'
 import AuthButton from '@/components/AuthButton'
+import DarkModeToggle from '@/components/DarkModeToggle'
 import type { Episode } from '@/types'
 
 export default function EditorPage() {
@@ -44,6 +45,7 @@ export default function EditorPage() {
         <span className="flex-1 truncate text-sm font-medium text-gray-700 dark:text-gray-300">
           {episode.title}
         </span>
+        <DarkModeToggle />
         <AuthButton user={user} />
       </header>
       <div className="flex-1 overflow-hidden">

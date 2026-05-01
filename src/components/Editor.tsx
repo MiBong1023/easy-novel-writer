@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import { useEditor } from '@/hooks/useEditor'
 import { useWordCount } from '@/hooks/useWordCount'
+import { useGoal } from '@/hooks/useGoal'
 import ProgressBar from './ProgressBar'
 import SpecialCharPanel from './SpecialCharPanel'
 
@@ -10,18 +11,24 @@ interface Props {
   episodeId: string
   initialContent: string
   userId: string
-  goal?: number
 }
 
-export default function Editor({ novelId, episodeId, initialContent, userId, goal = 6000 }: Props) {
+export default function Editor({ novelId, episodeId, initialContent, userId }: Props) {
   const [value, setValue] = useState(initialContent)
   const { ref, handleKeyDown, handleChange, insertAt } = useEditor(value, setValue)
+  const { goal, setGoal } = useGoal(episodeId)
   const { count, percent } = useWordCount(value, goal)
   const saveStatus = useAutoSave(novelId, episodeId, value, userId)
 
   return (
     <div className="flex h-full flex-col">
-      <ProgressBar count={count} goal={goal} percent={percent} saveStatus={saveStatus} />
+      <ProgressBar
+        count={count}
+        goal={goal}
+        percent={percent}
+        saveStatus={saveStatus}
+        onGoalChange={setGoal}
+      />
       <div className="relative flex-1 overflow-hidden">
         <textarea
           ref={ref}
