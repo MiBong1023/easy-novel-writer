@@ -2,9 +2,9 @@ interface ChunkResult {
   original: string
   html: string
   errataCount: number
+  _raw?: string  // 디버그용: 실제 API 응답 앞부분
 }
 
-// 500자 이하로 문단 경계에서 분할
 function splitText(text: string, maxLen: number): string[] {
   if (text.length <= maxLen) return [text]
   const chunks: string[] = []
@@ -25,23 +25,51 @@ function splitText(text: string, maxLen: number): string[] {
 }
 
 async function naverCheck(text: string): Promise<ChunkResult> {
-  const url = `https://m.search.naver.com/p/csearch/ocontent/spellchecker.nhn?_callback=spellcheck&q=${encodeURIComponent(text)}`
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Referer': 'https://search.naver.com/',
-      'Accept': '*/*',
-    },
-  })
-  const jsonp = await res.text()
-  // JSONP 래퍼 제거: spellcheck({...})
-  const json = jsonp.replace(/^[^(]+\(/, '').replace(/\);?\s*$/, '')
-  const data = JSON.parse(json)
-  const result = (data as { message?: { result?: { html?: string; errata_count?: number } } })?.message?.result ?? {}
-  return {
-    original: text,
-    html: result.html ?? '',
-    errataCount: result.errata_count ?? 0,
+  let rawResponse = ''
+  let httpStatus = 0
+  try {
+    const url = `https://m.search.naver.com/p/csearch/ocontent/spellchecker.nhn?_callback=spellcheck&q=${encodeURIComponent(text)}`
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://m.search.naver.com/',
+        'Accept': 'application/json, text/javascript, */*; q=0.01',
+        'Accept-Language': 'ko-KR,ko;q=0.9',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    })
+    httpStatus = res.status
+    rawResponse = await res.text()
+
+    if (!rawResponse.trim()) {
+      return { original: text, html: '', errataCount: 0, _raw: `[empty response] status=${httpStatus}` }
+    }
+
+    const openIdx = rawResponse.indexOf('(')
+    if (openIdx === -1) {
+      return { original: text, html: '', errataCount: 0, _raw: `[no JSONP] status=${httpStatus} body=${rawResponse.slice(0, 300)}` }
+    }
+
+    const json = rawResponse.slice(openIdx + 1).replace(/\);?\s*$/, '').trim()
+    if (!json) {
+      return { original: text, html: '', errataCount: 0, _raw: `[empty json] status=${httpStatus} raw=${rawResponse.slice(0, 300)}` }
+    }
+
+    const data = JSON.parse(json) as { message?: { result?: { html?: string; errata_count?: number } } }
+    const result = data?.message?.result ?? {}
+    return {
+      original: text,
+      html: result.html ?? '',
+      errataCount: result.errata_count ?? 0,
+      _raw: `[ok] status=${httpStatus}`,
+    }
+  } catch (e) {
+    return {
+      original: text,
+      html: '',
+      errataCount: 0,
+      _raw: `[error] status=${httpStatus} err=${String(e)} raw=${rawResponse.slice(0, 300)}`,
+    }
   }
 }
 
