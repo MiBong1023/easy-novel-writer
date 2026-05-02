@@ -7,6 +7,7 @@ import { useFindReplace } from '@/hooks/useFindReplace'
 import ProgressBar from './ProgressBar'
 import SpecialCharPanel from './SpecialCharPanel'
 import FindReplacePanel from './FindReplacePanel'
+import HighlightTextarea from './HighlightTextarea'
 
 interface Props {
   novelId: string
@@ -25,11 +26,9 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
   const { goal, setGoal } = useGoal(episodeId)
   const { count, countNoSpace, percent } = useWordCount(value, goal)
   const saveStatus = useAutoSave(novelId, episodeId, value, userId)
-  // window Cmd+F 리스너는 useFindReplace 내부에서 등록
   const fr = useFindReplace(value, (v) => { setValue(v); onContentChange?.(v) }, ref)
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    // textarea에 포커스가 있을 때 Cmd+F는 window 리스너가 처리하므로 기본 동작만 막음
     if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
       e.preventDefault()
       return
@@ -62,14 +61,14 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
             onClose={fr.handleClose}
           />
         )}
-        <textarea
+        <HighlightTextarea
           ref={ref}
           value={value}
+          highlights={fr.open ? fr.highlights : []}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           spellCheck={false}
           placeholder="여기에 소설을 써보세요…"
-          className="h-full w-full resize-none bg-white p-6 pb-20 text-base leading-loose text-gray-800 focus:outline-none dark:bg-gray-950 dark:text-gray-100 md:p-10 md:text-lg"
         />
       </div>
       <SpecialCharPanel onInsert={insertAt} />

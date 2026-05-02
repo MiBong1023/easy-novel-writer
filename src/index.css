@@ -11,9 +11,25 @@
 @layer base {
   html {
     @apply antialiased;
+    --caret-color: #1f2937;
+  }
+
+  html.dark {
+    --caret-color: #f3f4f6;
   }
 
   body {
     @apply bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100;
+  }
+
+  /* 찾기/바꾸기 하이라이트 */
+  mark {
+    background-color: rgba(250, 204, 21, 0.45);
+    border-radius: 2px;
+    color: inherit;
+  }
+
+  .dark mark {
+    background-color: rgba(161, 98, 7, 0.55);
   }
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { Highlight } from '@/components/HighlightTextarea'
 
 export function useFindReplace(
   value: string,
@@ -48,6 +49,23 @@ export function useFindReplace(
     return results
   }, [value, query])
 
+  const highlights: Highlight[] = useMemo(
+    () => matches.map((start) => ({ start, end: start + query.length })),
+    [matches, query],
+  )
+
+  // 쿼리 변경 시 첫 번째 매칭으로 자동 스크롤 (포커스 이동 없음)
+  useEffect(() => {
+    if (!matches.length || !query) return
+    const ta = textareaRef.current
+    if (!ta) return
+    const pos = matches[0]
+    const lineHeight = parseInt(getComputedStyle(ta).lineHeight) || 24
+    const lines = value.slice(0, pos).split('\n').length
+    ta.scrollTop = Math.max(0, (lines - 3) * lineHeight)
+    matchIndexRef.current = 1 % matches.length
+  }, [query]) // eslint-disable-line react-hooks/exhaustive-deps
+
   function selectAt(list: number[], idx: number) {
     const ta = textareaRef.current
     if (!ta || !list.length) return
@@ -56,7 +74,7 @@ export function useFindReplace(
     ta.setSelectionRange(pos, pos + query.length)
     const lineHeight = parseInt(getComputedStyle(ta).lineHeight) || 24
     const lines = value.slice(0, pos).split('\n').length
-    ta.scrollTop = (lines - 3) * lineHeight
+    ta.scrollTop = Math.max(0, (lines - 3) * lineHeight)
   }
 
   function findNext() {
@@ -73,7 +91,6 @@ export function useFindReplace(
     matchIndexRef.current = (idx + 1) % matches.length
   }
 
-  // 바꾸기 후 새 텍스트 기준으로 다음 매칭 자동 선택
   function replaceCurrent() {
     const ta = textareaRef.current
     if (!ta || !query) return
@@ -86,7 +103,6 @@ export function useFindReplace(
       : value
     if (isMatch) onChange(newValue)
 
-    // 바꾼 위치 이후의 다음 매칭을 새 텍스트에서 계산
     const searchFrom = isMatch ? start + replacement.length : start + query.length
     const nextMatches: number[] = []
     let i = newValue.indexOf(query)
@@ -95,10 +111,7 @@ export function useFindReplace(
       i = newValue.indexOf(query, i + 1)
     }
 
-    if (!nextMatches.length) {
-      matchIndexRef.current = 0
-      return
-    }
+    if (!nextMatches.length) { matchIndexRef.current = 0; return }
 
     let nextIdx = nextMatches.findIndex((m) => m >= searchFrom)
     if (nextIdx === -1) nextIdx = 0
@@ -122,6 +135,7 @@ export function useFindReplace(
     query, setQuery,
     replacement, setReplacement,
     matchCount: matches.length,
+    highlights,
     findNext, findPrev,
     replaceCurrent, replaceAll,
   }
