@@ -10,6 +10,8 @@ interface Props {
   autoConvert: boolean
   onToggleAutoConvert: () => void
   onVersionHistoryOpen: () => void
+  onSpellCheck: () => void
+  spellCheckActive: boolean
 }
 
 const STATUS_TEXT: Record<Props['saveStatus'], string> = {
@@ -19,7 +21,7 @@ const STATUS_TEXT: Record<Props['saveStatus'], string> = {
   error: '저장 실패',
 }
 
-export default function ProgressBar({ count, countNoSpace, goal, percent, saveStatus, onGoalChange, autoConvert, onToggleAutoConvert, onVersionHistoryOpen }: Props) {
+export default function ProgressBar({ count, countNoSpace, goal, percent, saveStatus, onGoalChange, autoConvert, onToggleAutoConvert, onVersionHistoryOpen, onSpellCheck, spellCheckActive }: Props) {
   const [editing, setEditing] = useState(false)
   const [input, setInput] = useState(String(goal))
 
@@ -66,6 +68,13 @@ export default function ProgressBar({ count, countNoSpace, goal, percent, saveSt
           <span className="text-gray-400 dark:text-gray-500">공백 제외 {countNoSpace.toLocaleString()}자</span>
         </span>
         <span className="flex items-center gap-3">
+          <button
+            onClick={onSpellCheck}
+            title="맞춤법 검사"
+            className={`transition ${spellCheckActive ? 'text-indigo-500' : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'}`}
+          >
+            맞춤법
+          </button>
           <button
             onClick={onVersionHistoryOpen}
             title="버전 기록"
