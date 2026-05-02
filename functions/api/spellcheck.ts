@@ -2,7 +2,7 @@ interface ChunkResult {
   original: string
   html: string
   errataCount: number
-  _raw?: string  // 디버그용: 실제 API 응답 앞부분
+  _raw?: string
 }
 
 function splitText(text: string, maxLen: number): string[] {
@@ -24,53 +24,88 @@ function splitText(text: string, maxLen: number): string[] {
   return chunks.filter(Boolean)
 }
 
-async function naverCheck(text: string): Promise<ChunkResult> {
+async function daumCheck(text: string): Promise<ChunkResult> {
   let rawResponse = ''
   let httpStatus = 0
   try {
-    const url = `https://m.search.naver.com/p/csearch/ocontent/spellchecker.nhn?_callback=spellcheck&q=${encodeURIComponent(text)}`
-    const res = await fetch(url, {
+    const res = await fetch('https://dic.daum.net/grammar_checker.do', {
+      method: 'POST',
       headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://m.search.naver.com/',
-        'Accept': 'application/json, text/javascript, */*; q=0.01',
+        'Referer': 'https://dic.daum.net/grammar_checker.do',
+        'Accept': 'application/json, text/html, */*',
         'Accept-Language': 'ko-KR,ko;q=0.9',
-        'X-Requested-With': 'XMLHttpRequest',
+        'Origin': 'https://dic.daum.net',
       },
+      body: `sentence=${encodeURIComponent(text)}`,
     })
     httpStatus = res.status
     rawResponse = await res.text()
 
-    if (!rawResponse.trim()) {
-      return { original: text, html: '', errataCount: 0, _raw: `[empty response] status=${httpStatus}` }
+    if (httpStatus !== 200) {
+      return { original: text, html: '', errataCount: 0, _raw: `[status=${httpStatus}] ${rawResponse.slice(0, 300)}` }
     }
 
-    const openIdx = rawResponse.indexOf('(')
-    if (openIdx === -1) {
-      return { original: text, html: '', errataCount: 0, _raw: `[no JSONP] status=${httpStatus} body=${rawResponse.slice(0, 300)}` }
+    // Daum 응답 파싱 시도 1: 직접 JSON
+    try {
+      const json = JSON.parse(rawResponse) as { result?: string; data?: { errors?: unknown[] } }
+      if (json.result === 'DONE') {
+        const errors = json.data?.errors ?? []
+        return parseDaumErrors(text, errors as DaumError[], rawResponse, httpStatus)
+      }
+    } catch { /* not plain JSON */ }
+
+    // Daum 응답 파싱 시도 2: HTML 내 JSON 추출
+    const jsonMatch = rawResponse.match(/[\[{][\s\S]*[}\]]\s*$/) ??
+                      rawResponse.match(/var\s+\w+\s*=\s*({[\s\S]+?});/) ??
+                      rawResponse.match(/\(({[\s\S]+?})\)/)
+
+    if (jsonMatch) {
+      try {
+        const json = JSON.parse(jsonMatch[1] ?? jsonMatch[0]) as { result?: string; data?: { errors?: unknown[] } }
+        const errors = json.data?.errors ?? []
+        return parseDaumErrors(text, errors as DaumError[], rawResponse, httpStatus)
+      } catch { /* parse failed */ }
     }
 
-    const json = rawResponse.slice(openIdx + 1).replace(/\);?\s*$/, '').trim()
-    if (!json) {
-      return { original: text, html: '', errataCount: 0, _raw: `[empty json] status=${httpStatus} raw=${rawResponse.slice(0, 300)}` }
-    }
-
-    const data = JSON.parse(json) as { message?: { result?: { html?: string; errata_count?: number } } }
-    const result = data?.message?.result ?? {}
     return {
       original: text,
-      html: result.html ?? '',
-      errataCount: result.errata_count ?? 0,
-      _raw: `[ok] status=${httpStatus}`,
+      html: rawResponse,   // 클라이언트 DOMParser용으로 HTML 전달
+      errataCount: -1,     // -1 = HTML 모드
+      _raw: `[html mode] status=${httpStatus} len=${rawResponse.length} preview=${rawResponse.slice(0, 200)}`,
     }
   } catch (e) {
-    return {
-      original: text,
-      html: '',
-      errataCount: 0,
-      _raw: `[error] status=${httpStatus} err=${String(e)} raw=${rawResponse.slice(0, 300)}`,
+    return { original: text, html: '', errataCount: 0, _raw: `[exception] status=${httpStatus} ${String(e)} raw=${rawResponse.slice(0, 200)}` }
+  }
+}
+
+interface DaumError {
+  token?: string
+  str?: string
+  help?: string
+  new_str?: string
+  candidates?: string[] | string
+}
+
+function parseDaumErrors(text: string, errors: DaumError[], raw: string, status: number): ChunkResult {
+  // Daum 오류 배열 → Naver 호환 HTML 마크업으로 변환
+  if (!errors.length) {
+    return { original: text, html: '', errataCount: 0, _raw: `[ok no errors] status=${status}` }
+  }
+  let html = text
+  for (const e of errors) {
+    const wrong = e.token ?? e.str ?? ''
+    const correct = Array.isArray(e.candidates) ? e.candidates[0] : (e.new_str ?? '')
+    const help = e.help ?? ''
+    if (wrong && correct && wrong !== correct) {
+      html = html.replace(
+        wrong,
+        `<span class="hl_yellow" data-correction="${correct}" data-err-msg="${help}">${wrong}</span>`,
+      )
     }
   }
+  return { original: text, html, errataCount: errors.length, _raw: `[ok] status=${status} errors=${errors.length}` }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -84,7 +119,7 @@ export async function onRequestPost(context: any): Promise<Response> {
     const chunks = splitText(text, 500)
     const results: ChunkResult[] = []
     for (const chunk of chunks) {
-      results.push(await naverCheck(chunk))
+      results.push(await daumCheck(chunk))
     }
     return new Response(JSON.stringify({ chunks: results }), { headers })
   } catch (e) {
