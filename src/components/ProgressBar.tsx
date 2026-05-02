@@ -9,6 +9,7 @@ interface Props {
   onGoalChange: (v: number) => void
   autoConvert: boolean
   onToggleAutoConvert: () => void
+  onVersionHistoryOpen: () => void
 }
 
 const STATUS_TEXT: Record<Props['saveStatus'], string> = {
@@ -18,7 +19,7 @@ const STATUS_TEXT: Record<Props['saveStatus'], string> = {
   error: '저장 실패',
 }
 
-export default function ProgressBar({ count, countNoSpace, goal, percent, saveStatus, onGoalChange, autoConvert, onToggleAutoConvert }: Props) {
+export default function ProgressBar({ count, countNoSpace, goal, percent, saveStatus, onGoalChange, autoConvert, onToggleAutoConvert, onVersionHistoryOpen }: Props) {
   const [editing, setEditing] = useState(false)
   const [input, setInput] = useState(String(goal))
 
@@ -65,6 +66,13 @@ export default function ProgressBar({ count, countNoSpace, goal, percent, saveSt
           <span className="text-gray-400 dark:text-gray-500">공백 제외 {countNoSpace.toLocaleString()}자</span>
         </span>
         <span className="flex items-center gap-3">
+          <button
+            onClick={onVersionHistoryOpen}
+            title="버전 기록"
+            className="text-gray-400 transition hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+          >
+            기록
+          </button>
           <button
             onClick={onToggleAutoConvert}
             title="자동 변환 (…, —, 스마트 따옴표)"

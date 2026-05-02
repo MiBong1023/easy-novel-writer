@@ -9,6 +9,7 @@ import ProgressBar from './ProgressBar'
 import SpecialCharPanel from './SpecialCharPanel'
 import FindReplacePanel from './FindReplacePanel'
 import HighlightTextarea from './HighlightTextarea'
+import VersionHistoryPanel from './VersionHistoryPanel'
 
 interface Props {
   novelId: string
@@ -20,6 +21,7 @@ interface Props {
 
 export default function Editor({ novelId, episodeId, initialContent, userId, onContentChange }: Props) {
   const [value, setValue] = useState(initialContent)
+  const [versionsOpen, setVersionsOpen] = useState(false)
   const { autoConvert, toggleAutoConvert } = useAutoConvert()
   const { ref, handleKeyDown: editorKeyDown, handleChange, insertAt } = useEditor(value, (v) => {
     setValue(v)
@@ -38,6 +40,11 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
     editorKeyDown(e)
   }
 
+  function handleRestore(content: string) {
+    setValue(content)
+    onContentChange?.(content)
+  }
+
   return (
     <div className="flex h-full flex-col">
       <ProgressBar
@@ -49,6 +56,7 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
         onGoalChange={setGoal}
         autoConvert={autoConvert}
         onToggleAutoConvert={toggleAutoConvert}
+        onVersionHistoryOpen={() => setVersionsOpen(true)}
       />
       <div className="relative flex-1 overflow-hidden">
         {fr.open && (
@@ -63,6 +71,15 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
             onReplace={fr.replaceCurrent}
             onReplaceAll={fr.replaceAll}
             onClose={fr.handleClose}
+          />
+        )}
+        {versionsOpen && (
+          <VersionHistoryPanel
+            novelId={novelId}
+            episodeId={episodeId}
+            userId={userId}
+            onRestore={handleRestore}
+            onClose={() => setVersionsOpen(false)}
           />
         )}
         <HighlightTextarea

@@ -4,6 +4,7 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import Editor from '@/components/Editor'
+import NotesPanel from '@/components/NotesPanel'
 import AuthButton from '@/components/AuthButton'
 import DarkModeToggle from '@/components/DarkModeToggle'
 import type { Episode } from '@/types'
@@ -13,6 +14,7 @@ export default function EditorPage() {
   const { user, loading } = useAuth()
   const [episode, setEpisode] = useState<Episode | null>(null)
   const [fetching, setFetching] = useState(true)
+  const [notesOpen, setNotesOpen] = useState(false)
   const contentRef = useRef('')
 
   useEffect(() => {
@@ -66,6 +68,13 @@ export default function EditorPage() {
           {episode.title}
         </span>
         <button
+          onClick={() => setNotesOpen((v) => !v)}
+          title="작품 메모"
+          className={`rounded-lg p-2 text-sm transition hover:bg-gray-100 dark:hover:bg-gray-800 ${notesOpen ? 'text-indigo-500' : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'}`}
+        >
+          🗒️
+        </button>
+        <button
           onClick={handleExport}
           title="txt로 내보내기"
           className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
@@ -75,7 +84,7 @@ export default function EditorPage() {
         <DarkModeToggle />
         <AuthButton user={user} />
       </header>
-      <div className="flex-1 overflow-hidden">
+      <div className="relative flex-1 overflow-hidden">
         <Editor
           novelId={novelId}
           episodeId={episodeId}
@@ -83,6 +92,13 @@ export default function EditorPage() {
           userId={user.uid}
           onContentChange={(v) => { contentRef.current = v }}
         />
+        {notesOpen && (
+          <NotesPanel
+            novelId={novelId}
+            userId={user.uid}
+            onClose={() => setNotesOpen(false)}
+          />
+        )}
       </div>
     </div>
   )
