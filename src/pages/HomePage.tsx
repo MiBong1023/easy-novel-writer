@@ -5,6 +5,7 @@ import {
   addDoc,
   getDocs,
   deleteDoc,
+  updateDoc,
   doc,
   query,
   orderBy,
@@ -59,6 +60,15 @@ export default function HomePage() {
     } catch {
       setError('작품 생성에 실패했습니다. 다시 시도해주세요.')
     }
+  }
+
+  async function handleRename(id: string, newTitle: string) {
+    if (!user) return
+    await updateDoc(doc(db, 'users', user.uid, 'novels', id), {
+      title: newTitle,
+      updatedAt: serverTimestamp(),
+    })
+    setNovels((prev) => prev.map((n) => (n.id === id ? { ...n, title: newTitle } : n)))
   }
 
   async function handleDelete(id: string) {
@@ -146,7 +156,7 @@ export default function HomePage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {novels.map((n) => (
-              <NovelCard key={n.id} novel={n} onDelete={handleDelete} />
+              <NovelCard key={n.id} novel={n} onDelete={handleDelete} onRename={handleRename} />
             ))}
           </div>
         )}

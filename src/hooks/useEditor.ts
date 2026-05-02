@@ -25,6 +25,7 @@ function transformTyping(text: string, inserted: string): string {
 export function useEditor(
   value: string,
   onChange: (v: string) => void,
+  autoConvert = true,
 ) {
   const ref = useRef<HTMLTextAreaElement>(null)
 
@@ -33,25 +34,28 @@ export function useEditor(
       const ta = e.currentTarget
       const { selectionStart, selectionEnd, value: v } = ta
 
-      // Smart double-quote on "
-      if (e.key === '"') {
+      // Smart double-quote on “
+      if (e.key === '”') {
         e.preventDefault()
         const before = v.slice(0, selectionStart)
         const after = v.slice(selectionEnd)
-        // If there's selected text, wrap it
-        if (selectionStart !== selectionEnd) {
-          const selected = v.slice(selectionStart, selectionEnd)
-          const next = before + '“' + selected + '”' + after
-          onChange(next)
-          openDoubleQuote = false
-          requestAnimationFrame(() => {
-            ta.selectionStart = ta.selectionEnd = selectionStart + selected.length + 2
-          })
-          return
+        if (autoConvert) {
+          if (selectionStart !== selectionEnd) {
+            const selected = v.slice(selectionStart, selectionEnd)
+            const next = before + '“' + selected + '”' + after
+            onChange(next)
+            openDoubleQuote = false
+            requestAnimationFrame(() => {
+              ta.selectionStart = ta.selectionEnd = selectionStart + selected.length + 2
+            })
+            return
+          }
+          const quote = openDoubleQuote ? '”' : '“'
+          openDoubleQuote = !openDoubleQuote
+          onChange(before + quote + after)
+        } else {
+          onChange(before + '”' + after)
         }
-        const quote = openDoubleQuote ? '”' : '“'
-        openDoubleQuote = !openDoubleQuote
-        onChange(before + quote + after)
         requestAnimationFrame(() => {
           ta.selectionStart = ta.selectionEnd = selectionStart + 1
         })
@@ -78,7 +82,7 @@ export function useEditor(
       // Detect last inserted character
       const diff = raw.length - value.length
       const inserted = diff === 1 ? raw[e.target.selectionStart - 1] : ''
-      const next = transformTyping(raw, inserted)
+      const next = autoConvert ? transformTyping(raw, inserted) : raw
       if (next !== raw) {
         const pos = e.target.selectionStart - (raw.length - next.length)
         onChange(next)

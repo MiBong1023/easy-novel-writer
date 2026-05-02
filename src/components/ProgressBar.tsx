@@ -7,6 +7,8 @@ interface Props {
   percent: number
   saveStatus: 'idle' | 'saving' | 'saved' | 'error'
   onGoalChange: (v: number) => void
+  autoConvert: boolean
+  onToggleAutoConvert: () => void
 }
 
 const STATUS_TEXT: Record<Props['saveStatus'], string> = {
@@ -16,7 +18,7 @@ const STATUS_TEXT: Record<Props['saveStatus'], string> = {
   error: '저장 실패',
 }
 
-export default function ProgressBar({ count, countNoSpace, goal, percent, saveStatus, onGoalChange }: Props) {
+export default function ProgressBar({ count, countNoSpace, goal, percent, saveStatus, onGoalChange, autoConvert, onToggleAutoConvert }: Props) {
   const [editing, setEditing] = useState(false)
   const [input, setInput] = useState(String(goal))
 
@@ -62,8 +64,17 @@ export default function ProgressBar({ count, countNoSpace, goal, percent, saveSt
           <span className="text-gray-300 dark:text-gray-600 mx-1">·</span>
           <span className="text-gray-400 dark:text-gray-500">공백 제외 {countNoSpace.toLocaleString()}자</span>
         </span>
-        <span className={saveStatus === 'error' ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'}>
-          {STATUS_TEXT[saveStatus]}
+        <span className="flex items-center gap-3">
+          <button
+            onClick={onToggleAutoConvert}
+            title="자동 변환 (…, —, 스마트 따옴표)"
+            className={`transition ${autoConvert ? 'text-indigo-500' : 'text-gray-300 dark:text-gray-600'}`}
+          >
+            자동변환
+          </button>
+          <span className={saveStatus === 'error' ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'}>
+            {STATUS_TEXT[saveStatus]}
+          </span>
         </span>
       </div>
       <div className="h-1 w-full rounded-full bg-gray-100 dark:bg-gray-800">

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAutoSave } from '@/hooks/useAutoSave'
+import { useAutoConvert } from '@/hooks/useAutoConvert'
 import { useEditor } from '@/hooks/useEditor'
 import { useWordCount } from '@/hooks/useWordCount'
 import { useGoal } from '@/hooks/useGoal'
@@ -19,10 +20,11 @@ interface Props {
 
 export default function Editor({ novelId, episodeId, initialContent, userId, onContentChange }: Props) {
   const [value, setValue] = useState(initialContent)
+  const { autoConvert, toggleAutoConvert } = useAutoConvert()
   const { ref, handleKeyDown: editorKeyDown, handleChange, insertAt } = useEditor(value, (v) => {
     setValue(v)
     onContentChange?.(v)
-  })
+  }, autoConvert)
   const { goal, setGoal } = useGoal(episodeId)
   const { count, countNoSpace, percent } = useWordCount(value, goal)
   const saveStatus = useAutoSave(novelId, episodeId, value, userId)
@@ -45,6 +47,8 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
         percent={percent}
         saveStatus={saveStatus}
         onGoalChange={setGoal}
+        autoConvert={autoConvert}
+        onToggleAutoConvert={toggleAutoConvert}
       />
       <div className="relative flex-1 overflow-hidden">
         {fr.open && (

@@ -26,6 +26,8 @@ export default function NovelPage() {
   const [episodes, setEpisodes] = useState<Episode[]>([])
   const [creating, setCreating] = useState(false)
   const [epTitle, setEpTitle] = useState('')
+  const [editingEpId, setEditingEpId] = useState<string | null>(null)
+  const [editDraft, setEditDraft] = useState('')
 
   useEffect(() => {
     if (!user || !novelId) return
@@ -58,6 +60,29 @@ export default function NovelPage() {
       updatedAt: serverTimestamp(),
     })
     navigate(`/novels/${novelId}/episodes/${ref.id}`)
+  }
+
+  function startEditEp(ep: Episode) {
+    setEditingEpId(ep.id)
+    setEditDraft(ep.title)
+  }
+
+  async function commitEditEp() {
+    if (!user || !novelId || !editingEpId) return
+    const trimmed = editDraft.trim()
+    if (trimmed) {
+      await updateDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', editingEpId), {
+        title: trimmed,
+        updatedAt: serverTimestamp(),
+      })
+      setEpisodes((prev) => prev.map((ep) => ep.id === editingEpId ? { ...ep, title: trimmed } : ep))
+    }
+    setEditingEpId(null)
+  }
+
+  function onEpKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') { e.preventDefault(); commitEditEp() }
+    if (e.key === 'Escape') setEditingEpId(null)
   }
 
   async function handleDeleteEpisode(epId: string) {
@@ -130,19 +155,39 @@ export default function NovelPage() {
             {episodes.map((ep) => (
               <li
                 key={ep.id}
-                className="group flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                className="group flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800"
               >
-                <Link
-                  to={`/novels/${novelId}/episodes/${ep.id}`}
-                  className="flex-1 min-w-0"
-                >
-                  <span className="text-xs text-gray-400 dark:text-gray-500 mr-2">{ep.order}화</span>
-                  <span className="font-medium text-gray-700 dark:text-gray-200">{ep.title}</span>
-                  <span className="ml-2 text-xs text-gray-400">{ep.charCount.toLocaleString()}자</span>
-                </Link>
+                {editingEpId === ep.id ? (
+                  <input
+                    autoFocus
+                    value={editDraft}
+                    onChange={(e) => setEditDraft(e.target.value)}
+                    onBlur={commitEditEp}
+                    onKeyDown={onEpKeyDown}
+                    className="flex-1 min-w-0 rounded-lg border border-indigo-400 bg-transparent px-1 text-sm font-medium text-gray-700 focus:outline-none dark:text-gray-200"
+                  />
+                ) : (
+                  <Link
+                    to={`/novels/${novelId}/episodes/${ep.id}`}
+                    className="flex-1 min-w-0"
+                  >
+                    <span className="text-xs text-gray-400 dark:text-gray-500 mr-2">{ep.order}화</span>
+                    <span className="font-medium text-gray-700 dark:text-gray-200">{ep.title}</span>
+                    <span className="ml-2 text-xs text-gray-400">{ep.charCount.toLocaleString()}자</span>
+                  </Link>
+                )}
+                {editingEpId !== ep.id && (
+                  <button
+                    onClick={() => startEditEp(ep)}
+                    className="rounded p-1 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-300"
+                    aria-label="제목 수정"
+                  >
+                    ✎
+                  </button>
+                )}
                 <button
                   onClick={() => handleDeleteEpisode(ep.id)}
-                  className="ml-2 rounded p-1 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-red-500 dark:text-gray-600"
+                  className="rounded p-1 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-red-500 dark:text-gray-600"
                   aria-label="삭제"
                 >
                   ✕
