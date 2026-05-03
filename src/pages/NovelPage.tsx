@@ -30,6 +30,7 @@ export default function NovelPage() {
   const [editDraft, setEditDraft] = useState('')
   const [descEditing, setDescEditing] = useState(false)
   const [descDraft, setDescDraft] = useState('')
+  const [epSearch, setEpSearch] = useState('')
   const dragIndexRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -246,7 +247,7 @@ export default function NovelPage() {
           </div>
         )}
 
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-3 flex items-center justify-between">
           <h2 className="font-semibold text-gray-700 dark:text-gray-300">회차 목록</h2>
           <button
             onClick={() => setCreating(true)}
@@ -255,6 +256,16 @@ export default function NovelPage() {
             + 새 회차
           </button>
         </div>
+
+        {episodes.length >= 5 && (
+          <input
+            type="search"
+            placeholder="회차 검색…"
+            value={epSearch}
+            onChange={(e) => setEpSearch(e.target.value)}
+            className="mb-4 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-600"
+          />
+        )}
 
         {creating && (
           <form onSubmit={handleCreateEpisode} className="mb-4 flex gap-2">
@@ -287,9 +298,18 @@ export default function NovelPage() {
             <p className="text-3xl mb-3">✍️</p>
             <p>아직 회차가 없어요. 첫 회차를 만들어보세요!</p>
           </div>
-        ) : (
+        ) : (() => {
+          const visible = epSearch.trim()
+            ? episodes.filter((ep) => ep.title.toLowerCase().includes(epSearch.toLowerCase()))
+            : episodes
+          if (visible.length === 0) return (
+            <p className="mt-8 text-center text-sm text-gray-400 dark:text-gray-600">
+              "{epSearch}"에 해당하는 회차가 없어요.
+            </p>
+          )
+          return (
           <ul className="space-y-2">
-            {episodes.map((ep, index) => (
+            {visible.map((ep, index) => (
               <li
                 key={ep.id}
                 draggable
@@ -347,7 +367,8 @@ export default function NovelPage() {
               </li>
             ))}
           </ul>
-        )}
+          )
+        })()}
       </main>
     </div>
   )

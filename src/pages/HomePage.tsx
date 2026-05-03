@@ -111,6 +111,7 @@ export default function HomePage() {
   const [desc, setDesc] = useState('')
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const [sortBy, setSortBy] = useState<'updated' | 'title' | 'episodes'>('updated')
   const navigate = useNavigate()
 
   const novelsRef = user ? collection(db, 'users', user.uid, 'novels') : null
@@ -172,12 +173,18 @@ export default function HomePage() {
     return <LandingPage />
   }
 
-  const filteredNovels = search.trim()
-    ? novels.filter((n) =>
-        n.title.toLowerCase().includes(search.toLowerCase()) ||
-        n.description?.toLowerCase().includes(search.toLowerCase()),
-      )
-    : novels
+  const filteredNovels = (
+    search.trim()
+      ? novels.filter((n) =>
+          n.title.toLowerCase().includes(search.toLowerCase()) ||
+          n.description?.toLowerCase().includes(search.toLowerCase()),
+        )
+      : [...novels]
+  ).sort((a, b) => {
+    if (sortBy === 'title') return a.title.localeCompare(b.title, 'ko')
+    if (sortBy === 'episodes') return b.episodeCount - a.episodeCount
+    return b.updatedAt.getTime() - a.updatedAt.getTime()
+  })
 
   // 로그인 완료 → 작품 목록
   return (
@@ -206,16 +213,31 @@ export default function HomePage() {
       </header>
 
       <main className="mx-auto max-w-4xl p-6">
-        {/* 검색 */}
+        {/* 검색 + 정렬 */}
         {!creating && novels.length > 0 && (
-          <div className="mb-6">
+          <div className="mb-6 flex gap-2">
             <input
               type="search"
               placeholder="작품 검색…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 shadow-sm placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-600"
+              className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 shadow-sm placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-600"
             />
+            <div className="flex rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 overflow-hidden">
+              {(['updated', 'title', 'episodes'] as const).map((key) => (
+                <button
+                  key={key}
+                  onClick={() => setSortBy(key)}
+                  className={`px-3 py-2 text-xs transition-colors ${
+                    sortBy === key
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {key === 'updated' ? '최근' : key === 'title' ? '제목' : '회차'}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

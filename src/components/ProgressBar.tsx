@@ -172,10 +172,17 @@ export default function ProgressBar({
       {/* 프로그레스 바 */}
       <div className="h-1 w-full rounded-full bg-gray-100 dark:bg-gray-800">
         <div
-          className="h-1 rounded-full bg-indigo-500 transition-all duration-300"
+          className={`h-1 rounded-full transition-all duration-500 ${
+            percent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'
+          }`}
           style={{ width: `${Math.min(percent, 100)}%` }}
         />
       </div>
+      {percent >= 100 && (
+        <p className="mt-1 text-center text-[10px] font-medium text-emerald-500 dark:text-emerald-400">
+          🎉 목표 달성!
+        </p>
+      )}
     </div>
   )
 }
