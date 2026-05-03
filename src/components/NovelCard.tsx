@@ -59,23 +59,23 @@ export default function NovelCard({ novel, onDelete, onRename, onColorChange }: 
   return (
     <div className="group relative flex flex-col rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800 overflow-hidden">
 
-      {/* 컬러 상단 바 */}
-      <div className={`h-1.5 w-full ${styles.bar}`} />
+      {/* 컬러 상단 바 — 호버 시 확장되며 색상 선택 노출 */}
+      <div className={`relative flex h-1.5 w-full items-center justify-center transition-all duration-200 group-hover:h-9 ${styles.bar}`}>
+        <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+          {NOVEL_COLORS.map((c) => (
+            <button
+              key={c}
+              onClick={(e) => { e.preventDefault(); onColorChange(novel.id, c) }}
+              className={`h-4 w-4 rounded-full border-2 transition-transform hover:scale-125 ${COLOR_STYLES[c].dot} ${c === color ? 'border-white shadow-sm' : 'border-transparent'}`}
+              aria-label={c}
+            />
+          ))}
+        </div>
+      </div>
 
-      {/* 액션 버튼 */}
+      {/* 액션 버튼 (✎ ✕) */}
       {!editing && (
-        <div className="absolute right-3 top-4 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-          {/* 컬러 선택 */}
-          <div className="mr-1 flex items-center gap-0.5">
-            {NOVEL_COLORS.map((c) => (
-              <button
-                key={c}
-                onClick={(e) => { e.preventDefault(); onColorChange(novel.id, c) }}
-                className={`h-3.5 w-3.5 rounded-full transition-transform hover:scale-125 ${COLOR_STYLES[c].dot} ${c === color ? 'ring-1 ring-offset-1 ring-gray-400' : ''}`}
-                aria-label={c}
-              />
-            ))}
-          </div>
+        <div className="absolute right-3 top-11 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
           <button
             onClick={startEdit}
             className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
@@ -108,7 +108,7 @@ export default function NovelCard({ novel, onDelete, onRename, onColorChange }: 
       ) : (
         <Link to={`/novels/${novel.id}`} className="flex flex-1 flex-col p-5">
           {/* 제목 */}
-          <h2 className="mb-2 pr-14 text-lg font-bold leading-snug text-gray-800 transition-colors group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400">
+          <h2 className="mb-2 pr-16 text-lg font-bold leading-snug text-gray-800 transition-colors group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400">
             {novel.title}
           </h2>
 
