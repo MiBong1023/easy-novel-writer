@@ -1,6 +1,6 @@
 # 쉬운 소설 작가 — 구조 문서
 
-> 마지막 업데이트: 2026-05-03 (랜딩 페이지, 집중 모드, 글자 크기, 전체 내보내기, 작품 설명 수정, 통계, NovelCard 리디자인)
+> 마지막 업데이트: 2026-05-03 (랜딩 페이지, 집중 모드, 글자 크기, 전체 내보내기, 작품 설명 수정, 통계 바, NovelCard 리디자인, 글쓰기 통계 페이지, 일별 작성량 자동 기록)
 
 ---
 
@@ -30,11 +30,13 @@ users/{uid}/
         content, charCount, savedAt
     notes/{noteId}/                   ← 작품별 메모
       title, body, updatedAt
+  stats/{YYYY-MM-DD}/                 ← 일별 글쓰기 통계
+    date, charsAdded
 ```
 
 ---
 
-## 화면 구성 (3개 페이지)
+## 화면 구성 (4개 페이지)
 
 ### 1. 홈 화면 `/`
 **파일:** `src/pages/HomePage.tsx`
@@ -134,6 +136,28 @@ users/{uid}/
 
 ---
 
+### 4. 글쓰기 통계 화면 `/stats`
+**파일:** `src/pages/StatsPage.tsx`
+
+- 로그인 필수 (비로그인 시 `/` 리디렉션)
+- Firestore `users/{uid}/stats` 컬렉션 전체 로드
+
+```
+┌──────────────────────────────────────────────┐
+│ 헤더: ← 목록 | 글쓰기 통계 | 다크모드           │
+├──────────────────────────────────────────────┤
+│  [오늘 N자] [이번 주 N자] [누적 N자] [연속 N일] │  ← 4개 StatCard
+├──────────────────────────────────────────────┤
+│  최근 14일 바 차트 (오늘=인디고, 기록=연보라)    │
+└──────────────────────────────────────────────┘
+```
+
+- **StatCard** — 레이블 + 값 + 단위, 오늘 카드는 인디고 강조
+- **바 차트** — 높이: `(값 / 최댓값) × 100%`, 호버 시 툴팁
+- **연속 작성 스트릭** — 오늘(또는 어제)부터 역방향으로 연속 날짜 카운트
+
+---
+
 ## 컴포넌트 상세
 
 ### 진행바 — `src/components/ProgressBar.tsx`
@@ -216,7 +240,7 @@ div.overflow-hidden
 
 | 훅 | 파일 | 역할 |
 |----|------|------|
-| `useAutoSave` | `src/hooks/useAutoSave.ts` | 1.5초 디바운스 Firestore 저장 + 5분마다 버전 스냅샷 |
+| `useAutoSave` | `src/hooks/useAutoSave.ts` | 1.5초 디바운스 Firestore 저장 + 5분마다 버전 스냅샷 + 증가분(`delta > 0`)만 `stats/{date}`에 누적 |
 | `useEditor` | `src/hooks/useEditor.ts` | 탭(2칸), 스마트 따옴표, 자동변환(`...`→`…` 등), 커서 스크롤 |
 | `useAutoConvert` | `src/hooks/useAutoConvert.ts` | 자동변환 ON/OFF 상태 (`localStorage`) |
 | `useFindReplace` | `src/hooks/useFindReplace.ts` | 검색/치환 로직, 일치 위치 → `Highlight[]` 변환 |

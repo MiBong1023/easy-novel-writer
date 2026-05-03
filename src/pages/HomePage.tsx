@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import {
   collection,
   addDoc,
@@ -179,6 +179,12 @@ export default function HomePage() {
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">쉬운 소설 작가</h1>
           <div className="flex items-center gap-2">
             <DarkModeToggle />
+            <Link
+              to="/stats"
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-500 transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            >
+              통계
+            </Link>
             <button
               onClick={() => setCreating(true)}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 active:scale-95"

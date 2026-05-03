@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { doc, setDoc, serverTimestamp, collection, addDoc } from 'firebase/firestore'
+import { doc, setDoc, serverTimestamp, collection, addDoc, increment, updateDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -25,7 +25,18 @@ export function useAutoSave(
       setStatus('saving')
       try {
         const ref = doc(db, 'users', userId, 'novels', novelId, 'episodes', episodeId)
+        const delta = content.length - prevContentRef.current.length
         await setDoc(ref, { content, updatedAt: serverTimestamp(), charCount: content.length }, { merge: true })
+
+        // 오늘 작성량 기록 (증가분만)
+        if (delta > 0) {
+          const today = new Date().toISOString().slice(0, 10)
+          const statsRef = doc(db, 'users', userId, 'stats', today)
+          updateDoc(statsRef, { charsAdded: increment(delta) }).catch(() =>
+            setDoc(statsRef, { charsAdded: delta, date: today })
+          )
+        }
+
         prevContentRef.current = content
         setStatus('saved')
 
