@@ -90,6 +90,25 @@ export default function NovelPage() {
     if (e.key === 'Escape') setEditingEpId(null)
   }
 
+  async function handleExportAll() {
+    if (!user || !novelId || episodes.length === 0) return
+    const lines: string[] = [`${novel?.title ?? '작품'}\n`]
+    for (const ep of episodes) {
+      const snap = await import('firebase/firestore').then(({ getDoc, doc }) =>
+        getDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', ep.id))
+      )
+      const content = snap.exists() ? (snap.data().content as string) : ''
+      lines.push(`${'='.repeat(40)}\n${ep.order}화 ${ep.title}\n${'='.repeat(40)}\n\n${content}`)
+    }
+    const blob = new Blob([lines.join('\n\n')], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${novel?.title ?? '작품'}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   async function handleDeleteEpisode(epId: string) {
     if (!user || !novelId || !window.confirm('회차를 삭제할까요?')) return
     await deleteDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', epId))
@@ -138,6 +157,15 @@ export default function NovelPage() {
             ← 목록
           </Link>
           <h1 className="flex-1 truncate text-lg font-bold text-gray-800 dark:text-gray-100">{novel.title}</h1>
+          {episodes.length > 0 && (
+            <button
+              onClick={handleExportAll}
+              title="전체 회차 txt로 내보내기"
+              className="text-sm text-gray-400 transition hover:text-gray-700 dark:hover:text-gray-200"
+            >
+              ↓ 전체 내보내기
+            </button>
+          )}
           <DarkModeToggle />
           {user && <AuthButton user={user} />}
         </div>

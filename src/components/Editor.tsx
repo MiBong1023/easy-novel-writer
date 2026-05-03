@@ -6,6 +6,7 @@ import { useWordCount } from '@/hooks/useWordCount'
 import { useGoal } from '@/hooks/useGoal'
 import { useFindReplace } from '@/hooks/useFindReplace'
 import { useSpellCheck } from '@/hooks/useSpellCheck'
+import { useEditorSettings } from '@/hooks/useEditorSettings'
 import type { SpellError } from '@/hooks/useSpellCheck'
 import type { Highlight } from './HighlightTextarea'
 import ProgressBar from './ProgressBar'
@@ -30,6 +31,7 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
   const [versionsOpen, setVersionsOpen] = useState(false)
   const [spellCheckOpen, setSpellCheckOpen] = useState(false)
   const { autoConvert, toggleAutoConvert } = useAutoConvert()
+  const { fontSize, increase, decrease, canIncrease, canDecrease } = useEditorSettings()
   const { ref, handleKeyDown: editorKeyDown, handleChange, insertAt } = useEditor(value, (v) => {
     setValue(v)
     onContentChange?.(v)
@@ -113,6 +115,10 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
           onSpellCheck={toggleSpellCheck}
           spellCheckActive={spellCheckOpen}
           onFocusMode={onToggleFocusMode ?? (() => {})}
+          onFontIncrease={increase}
+          onFontDecrease={decrease}
+          canFontIncrease={canIncrease}
+          canFontDecrease={canDecrease}
         />
       )}
       <div className="relative flex-1 overflow-hidden">
@@ -155,6 +161,7 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
         <HighlightTextarea
           ref={ref}
           value={value}
+          fontSize={fontSize}
           highlights={[
             ...(fr.open ? fr.highlights : []),
             ...(spellCheckOpen && sc.checked ? getSpellHighlights(sc.errors) : []),

@@ -13,9 +13,10 @@ interface Props {
   onKeyDown: React.KeyboardEventHandler<HTMLTextAreaElement>
   spellCheck?: boolean
   placeholder?: string
+  fontSize?: string  // e.g. 'text-sm' | 'text-base' | 'text-lg' | 'text-xl'
 }
 
-const SHARED = 'p-6 pb-20 text-base leading-loose md:p-10 md:text-lg'
+const BASE = 'p-6 pb-20 leading-loose md:p-10'
 
 function buildHtml(text: string, highlights: Highlight[]): string {
   const esc = (s: string) =>
@@ -39,9 +40,10 @@ function buildHtml(text: string, highlights: Highlight[]): string {
 }
 
 const HighlightTextarea = forwardRef<HTMLTextAreaElement, Props>(
-  ({ value, highlights, ...props }, ref) => {
+  ({ value, highlights, fontSize = 'text-base', ...props }, ref) => {
     const backdropRef = useRef<HTMLDivElement>(null)
     const showing = highlights.length > 0
+    const shared = `${BASE} ${fontSize}`
 
     function handleScroll(e: React.UIEvent<HTMLTextAreaElement>) {
       if (backdropRef.current) {
@@ -58,7 +60,7 @@ const HighlightTextarea = forwardRef<HTMLTextAreaElement, Props>(
         >
           <div
             ref={backdropRef}
-            className={`${SHARED} whitespace-pre-wrap break-words text-gray-800 dark:text-gray-100`}
+            className={`${shared} whitespace-pre-wrap break-words text-gray-800 dark:text-gray-100`}
             dangerouslySetInnerHTML={{ __html: buildHtml(value, highlights) }}
           />
         </div>
@@ -69,11 +71,9 @@ const HighlightTextarea = forwardRef<HTMLTextAreaElement, Props>(
           onScroll={handleScroll}
           {...props}
           className={[
-            SHARED,
+            shared,
             'relative z-10 h-full w-full resize-none bg-transparent focus:outline-none',
-            showing
-              ? 'text-transparent'
-              : 'text-gray-800 dark:text-gray-100',
+            showing ? 'text-transparent' : 'text-gray-800 dark:text-gray-100',
           ].join(' ')}
           style={showing ? { caretColor: 'var(--caret-color)' } : undefined}
         />

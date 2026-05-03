@@ -13,6 +13,10 @@ interface Props {
   onSpellCheck: () => void
   spellCheckActive: boolean
   onFocusMode: () => void
+  onFontIncrease: () => void
+  onFontDecrease: () => void
+  canFontIncrease: boolean
+  canFontDecrease: boolean
 }
 
 const STATUS_TEXT: Record<Props['saveStatus'], string> = {
@@ -26,6 +30,7 @@ export default function ProgressBar({
   count, countNoSpace, goal, percent, saveStatus, onGoalChange,
   autoConvert, onToggleAutoConvert, onVersionHistoryOpen,
   onSpellCheck, spellCheckActive, onFocusMode,
+  onFontIncrease, onFontDecrease, canFontIncrease, canFontDecrease,
 }: Props) {
   const [editing, setEditing] = useState(false)
   const [input, setInput] = useState(String(goal))
@@ -116,6 +121,25 @@ export default function ProgressBar({
             }`}
           >
             자동변환
+          </button>
+
+          {/* 글자 크기 */}
+          <div className="mx-1 h-4 w-px bg-gray-200 dark:bg-gray-700" />
+          <button
+            onClick={onFontDecrease}
+            disabled={!canFontDecrease}
+            title="글자 작게"
+            className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-30 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+          >
+            A-
+          </button>
+          <button
+            onClick={onFontIncrease}
+            disabled={!canFontIncrease}
+            title="글자 크게"
+            className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-30 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+          >
+            A+
           </button>
 
           {/* 집중 모드 구분선 */}
