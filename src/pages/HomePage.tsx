@@ -110,6 +110,7 @@ export default function HomePage() {
   const [title, setTitle] = useState('')
   const [desc, setDesc] = useState('')
   const [error, setError] = useState('')
+  const [search, setSearch] = useState('')
   const navigate = useNavigate()
 
   const novelsRef = user ? collection(db, 'users', user.uid, 'novels') : null
@@ -171,6 +172,13 @@ export default function HomePage() {
     return <LandingPage />
   }
 
+  const filteredNovels = search.trim()
+    ? novels.filter((n) =>
+        n.title.toLowerCase().includes(search.toLowerCase()) ||
+        n.description?.toLowerCase().includes(search.toLowerCase()),
+      )
+    : novels
+
   // 로그인 완료 → 작품 목록
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -198,6 +206,19 @@ export default function HomePage() {
       </header>
 
       <main className="mx-auto max-w-4xl p-6">
+        {/* 검색 */}
+        {!creating && novels.length > 0 && (
+          <div className="mb-6">
+            <input
+              type="search"
+              placeholder="작품 검색…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 shadow-sm placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-600"
+            />
+          </div>
+        )}
+
         {creating && (
           <form
             onSubmit={handleCreate}
@@ -247,9 +268,16 @@ export default function HomePage() {
             <p className="mb-4 text-4xl">📖</p>
             <p>아직 작품이 없어요. 새 작품을 만들어보세요!</p>
           </div>
+        ) : filteredNovels.length === 0 ? (
+          <div className="mt-16 text-center text-gray-400 dark:text-gray-600">
+            <p className="mb-2 text-2xl">🔍</p>
+            <p className="text-sm">
+              <span className="font-medium text-gray-600 dark:text-gray-400">"{search}"</span>에 해당하는 작품이 없어요.
+            </p>
+          </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {novels.map((n) => (
+            {filteredNovels.map((n) => (
               <NovelCard key={n.id} novel={n} onDelete={handleDelete} onRename={handleRename} />
             ))}
           </div>
