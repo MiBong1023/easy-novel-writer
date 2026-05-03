@@ -42,7 +42,11 @@ export function useNotes(novelId: string, userId: string) {
       ...changes,
       updatedAt: serverTimestamp(),
     })
-    setNotes((prev) => prev.map((n) => n.id === id ? { ...n, ...changes, updatedAt: new Date() } : n))
+    setNotes((prev) =>
+      prev
+        .map((n) => n.id === id ? { ...n, ...changes, updatedAt: new Date() } : n)
+        .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+    )
   }, [novelId, userId])
 
   const deleteNote = useCallback(async (id: string) => {

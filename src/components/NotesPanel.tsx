@@ -133,7 +133,8 @@ export default function NotesPanel({ novelId, userId, onClose }: Props) {
                         value={draft.body}
                         onChange={(e) => setDraft(note.id, { body: e.target.value })}
                         onBlur={() => handleBlurField(note)}
-                        placeholder="내용을 입력하세요…"
+                        onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') e.currentTarget.blur() }}
+                        placeholder="내용을 입력하세요… (Cmd+Enter로 저장)"
                         rows={6}
                         className="w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs leading-relaxed focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
                       />

@@ -285,13 +285,19 @@ export default function NovelPage() {
         </div>
 
         {/* 통계 */}
-        {episodes.length > 0 && (
-          <div className="mb-6 flex items-center gap-2 rounded-lg bg-gray-50 px-4 py-2.5 text-sm text-gray-500 dark:bg-gray-900 dark:text-gray-400">
-            <span className="font-medium text-gray-700 dark:text-gray-200">{episodes.length}회차</span>
-            <span className="text-gray-300 dark:text-gray-700">·</span>
-            <span>총 <span className="font-medium text-gray-700 dark:text-gray-200">{episodes.reduce((s, ep) => s + (ep.charCount || 0), 0).toLocaleString()}</span>자 작성</span>
-          </div>
-        )}
+        {episodes.length > 0 && (() => {
+          const totalChars = episodes.reduce((s, ep) => s + (ep.charCount || 0), 0)
+          const avgChars = Math.round(totalChars / episodes.length)
+          return (
+            <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-gray-50 px-4 py-2.5 text-sm text-gray-500 dark:bg-gray-900 dark:text-gray-400">
+              <span className="font-medium text-gray-700 dark:text-gray-200">{episodes.length}회차</span>
+              <span className="text-gray-300 dark:text-gray-700">·</span>
+              <span>총 <span className="font-medium text-gray-700 dark:text-gray-200">{totalChars.toLocaleString()}</span>자</span>
+              <span className="text-gray-300 dark:text-gray-700">·</span>
+              <span>평균 <span className="font-medium text-gray-700 dark:text-gray-200">{avgChars.toLocaleString()}</span>자/회</span>
+            </div>
+          )
+        })()}
 
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -404,12 +410,18 @@ export default function NovelPage() {
                 onDragStart={() => !selectMode && handleDragStart(index)}
                 onDragOver={(e) => !selectMode && handleDragOver(e, index)}
                 onDragEnd={() => !selectMode && handleDragEnd()}
-                className={`group flex items-center gap-2 rounded-xl border bg-white px-4 py-3 hover:shadow-sm dark:bg-gray-800 ${
+                className={`group flex cursor-pointer items-center gap-2 rounded-xl border bg-white px-4 py-3 hover:shadow-sm dark:bg-gray-800 ${
                   selectMode && selectedIds.has(ep.id)
                     ? 'border-indigo-400 dark:border-indigo-600'
                     : 'border-gray-200 dark:border-gray-700'
-                } ${selectMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing active:opacity-60'}`}
-                onClick={selectMode ? () => toggleSelect(ep.id) : undefined}
+                }`}
+                onClick={
+                  selectMode
+                    ? () => toggleSelect(ep.id)
+                    : editingEpId !== ep.id
+                    ? () => navigate(`/novels/${novelId}/episodes/${ep.id}`)
+                    : undefined
+                }
               >
                 {selectMode ? (
                   <input
@@ -420,7 +432,11 @@ export default function NovelPage() {
                     className="h-4 w-4 shrink-0 rounded accent-indigo-500"
                   />
                 ) : (
-                  <span className="text-gray-200 dark:text-gray-700 select-none" aria-hidden="true">⠿</span>
+                  <span
+                    onClick={(e) => e.stopPropagation()}
+                    className="cursor-grab text-gray-200 select-none dark:text-gray-700"
+                    aria-hidden="true"
+                  >⠿</span>
                 )}
                 {editingEpId === ep.id ? (
                   <input
@@ -429,16 +445,14 @@ export default function NovelPage() {
                     onChange={(e) => setEditDraft(e.target.value)}
                     onBlur={commitEditEp}
                     onKeyDown={onEpKeyDown}
+                    onClick={(e) => e.stopPropagation()}
                     className="flex-1 min-w-0 rounded-lg border border-indigo-400 bg-transparent px-1 text-sm font-medium text-gray-700 focus:outline-none dark:text-gray-200"
                   />
                 ) : (
-                  <Link
-                    to={`/novels/${novelId}/episodes/${ep.id}`}
-                    className="flex-1 min-w-0"
-                  >
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
                       <span className="text-xs text-gray-400 dark:text-gray-500">{ep.order}화</span>
-                      <span className="font-medium text-gray-700 dark:text-gray-200">{ep.title}</span>
+                      <span className="font-medium text-gray-700 group-hover:text-indigo-600 dark:text-gray-200 dark:group-hover:text-indigo-400">{ep.title}</span>
                       <span className="text-xs text-gray-400">{ep.charCount.toLocaleString()}자</span>
                     </div>
                     {ep.excerpt && (
@@ -446,19 +460,19 @@ export default function NovelPage() {
                         {ep.excerpt}
                       </p>
                     )}
-                  </Link>
+                  </div>
                 )}
                 {!selectMode && editingEpId !== ep.id && (
                   <>
                     <button
-                      onClick={() => startEditEp(ep)}
+                      onClick={(e) => { e.stopPropagation(); startEditEp(ep) }}
                       className="rounded p-1 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-300"
                       aria-label="제목 수정"
                     >
                       ✎
                     </button>
                     <button
-                      onClick={() => handleCopyEpisode(ep)}
+                      onClick={(e) => { e.stopPropagation(); handleCopyEpisode(ep) }}
                       className="rounded p-1 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-indigo-500 dark:text-gray-600 dark:hover:text-indigo-400"
                       aria-label="회차 복사"
                       title="복사"
@@ -467,13 +481,15 @@ export default function NovelPage() {
                     </button>
                   </>
                 )}
-                {!selectMode && <button
-                  onClick={() => handleDeleteEpisode(ep.id)}
-                  className="rounded p-1 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-red-500 dark:text-gray-600"
-                  aria-label="삭제"
-                >
-                  ✕
-                </button>}
+                {!selectMode && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDeleteEpisode(ep.id) }}
+                    className="rounded p-1 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-red-500 dark:text-gray-600"
+                    aria-label="삭제"
+                  >
+                    ✕
+                  </button>
+                )}
               </li>
             ))}
           </ul>

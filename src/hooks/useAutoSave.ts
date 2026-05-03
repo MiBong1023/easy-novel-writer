@@ -11,6 +11,7 @@ export function useAutoSave(
   userId: string | null,
 ) {
   const [status, setStatus] = useState<SaveStatus>('idle')
+  const [hasUnsaved, setHasUnsaved] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prevContentRef = useRef(content)
   const lastVersionTimeRef = useRef(0)
@@ -19,6 +20,7 @@ export function useAutoSave(
     if (!userId || !novelId || !episodeId) return
     if (content === prevContentRef.current) return
 
+    setHasUnsaved(true)
     if (timerRef.current) clearTimeout(timerRef.current)
 
     timerRef.current = setTimeout(async () => {
@@ -44,6 +46,7 @@ export function useAutoSave(
         }
 
         prevContentRef.current = content
+        setHasUnsaved(false)
         setStatus('saved')
 
         // 5분마다 버전 스냅샷 저장
@@ -62,6 +65,17 @@ export function useAutoSave(
       if (timerRef.current) clearTimeout(timerRef.current)
     }
   }, [content, userId, novelId, episodeId])
+
+  // 미저장 내용 있을 때 탭 닫기/이탈 경고
+  useEffect(() => {
+    function handler(e: BeforeUnloadEvent) {
+      if (!hasUnsaved) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [hasUnsaved])
 
   return status
 }
