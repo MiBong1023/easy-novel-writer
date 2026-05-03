@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   collection,
@@ -28,6 +28,7 @@ export default function NovelPage() {
   const [epTitle, setEpTitle] = useState('')
   const [editingEpId, setEditingEpId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState('')
+  const dragIndexRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (!user || !novelId) return
@@ -91,6 +92,36 @@ export default function NovelPage() {
     setEpisodes((prev) => prev.filter((ep) => ep.id !== epId))
   }
 
+  function handleDragStart(index: number) {
+    dragIndexRef.current = index
+  }
+
+  function handleDragOver(e: React.DragEvent, index: number) {
+    e.preventDefault()
+    const from = dragIndexRef.current
+    if (from === null || from === index) return
+    setEpisodes((prev) => {
+      const next = [...prev]
+      const [moved] = next.splice(from, 1)
+      next.splice(index, 0, moved)
+      return next.map((ep, i) => ({ ...ep, order: i + 1 }))
+    })
+    dragIndexRef.current = index
+  }
+
+  async function handleDragEnd() {
+    dragIndexRef.current = null
+    if (!user || !novelId) return
+    setEpisodes((prev) => {
+      prev.forEach((ep, i) => {
+        updateDoc(doc(db, 'users', user!.uid, 'novels', novelId!, 'episodes', ep.id), {
+          order: i + 1,
+        }).catch(() => {})
+      })
+      return prev
+    })
+  }
+
   if (loading || !novel) {
     return <div className="flex h-screen items-center justify-center text-gray-400">로딩 중…</div>
   }
@@ -152,11 +183,16 @@ export default function NovelPage() {
           </div>
         ) : (
           <ul className="space-y-2">
-            {episodes.map((ep) => (
+            {episodes.map((ep, index) => (
               <li
                 key={ep.id}
-                className="group flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragEnd={handleDragEnd}
+                className="group flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 cursor-grab active:cursor-grabbing active:opacity-60"
               >
+                <span className="text-gray-200 dark:text-gray-700 select-none" aria-hidden="true">⠿</span>
                 {editingEpId === ep.id ? (
                   <input
                     autoFocus

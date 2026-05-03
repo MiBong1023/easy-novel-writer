@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { doc, getDoc } from 'firebase/firestore'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { doc, getDoc, collection, getDocs, query, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import Editor from '@/components/Editor'
@@ -12,15 +12,22 @@ import type { Episode } from '@/types'
 export default function EditorPage() {
   const { novelId, episodeId } = useParams<{ novelId: string; episodeId: string }>()
   const { user, loading } = useAuth()
+  const navigate = useNavigate()
   const [episode, setEpisode] = useState<Episode | null>(null)
+  const [siblings, setSiblings] = useState<{ id: string; order: number }[]>([])
   const [fetching, setFetching] = useState(true)
   const [notesOpen, setNotesOpen] = useState(false)
   const contentRef = useRef('')
 
   useEffect(() => {
     if (!user || !novelId || !episodeId) return
-    const ref = doc(db, 'users', user.uid, 'novels', novelId, 'episodes', episodeId)
-    getDoc(ref).then((snap) => {
+    setFetching(true)
+    const epRef = doc(db, 'users', user.uid, 'novels', novelId, 'episodes', episodeId)
+    const listRef = collection(db, 'users', user.uid, 'novels', novelId, 'episodes')
+    Promise.all([
+      getDoc(epRef),
+      getDocs(query(listRef, orderBy('order', 'asc'))),
+    ]).then(([snap, listSnap]) => {
       if (snap.exists()) {
         const data = snap.data()
         const ep: Episode = {
@@ -32,6 +39,7 @@ export default function EditorPage() {
         setEpisode(ep)
         contentRef.current = ep.content
       }
+      setSiblings(listSnap.docs.map((d) => ({ id: d.id, order: d.data().order ?? 0 })))
       setFetching(false)
     })
   }, [user, novelId, episodeId])
@@ -55,6 +63,10 @@ export default function EditorPage() {
     return <div className="flex h-screen items-center justify-center text-gray-400">회차를 찾을 수 없어요.</div>
   }
 
+  const currentIdx = siblings.findIndex((s) => s.id === episodeId)
+  const prevEp = currentIdx > 0 ? siblings[currentIdx - 1] : null
+  const nextEp = currentIdx >= 0 && currentIdx < siblings.length - 1 ? siblings[currentIdx + 1] : null
+
   return (
     <div className="flex h-screen flex-col bg-white dark:bg-gray-950">
       <header className="flex shrink-0 items-center gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
@@ -67,6 +79,24 @@ export default function EditorPage() {
         <span className="flex-1 truncate text-sm font-medium text-gray-700 dark:text-gray-300">
           {episode.title}
         </span>
+        {prevEp && (
+          <button
+            onClick={() => navigate(`/novels/${novelId}/episodes/${prevEp.id}`)}
+            title="이전 회차"
+            className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+          >
+            ‹
+          </button>
+        )}
+        {nextEp && (
+          <button
+            onClick={() => navigate(`/novels/${novelId}/episodes/${nextEp.id}`)}
+            title="다음 회차"
+            className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+          >
+            ›
+          </button>
+        )}
         <button
           onClick={() => setNotesOpen((v) => !v)}
           title="작품 메모"
