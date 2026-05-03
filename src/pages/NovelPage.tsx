@@ -28,6 +28,8 @@ export default function NovelPage() {
   const [epTitle, setEpTitle] = useState('')
   const [editingEpId, setEditingEpId] = useState<string | null>(null)
   const [editDraft, setEditDraft] = useState('')
+  const [descEditing, setDescEditing] = useState(false)
+  const [descDraft, setDescDraft] = useState('')
   const dragIndexRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -109,6 +111,18 @@ export default function NovelPage() {
     URL.revokeObjectURL(url)
   }
 
+  async function saveDesc() {
+    setDescEditing(false)
+    if (!user || !novelId || !novel) return
+    const trimmed = descDraft.trim()
+    if (trimmed === (novel.description ?? '')) return
+    await updateDoc(doc(db, 'users', user.uid, 'novels', novelId), {
+      description: trimmed,
+      updatedAt: serverTimestamp(),
+    })
+    setNovel((prev) => prev ? { ...prev, description: trimmed } : prev)
+  }
+
   async function handleDeleteEpisode(epId: string) {
     if (!user || !novelId || !window.confirm('회차를 삭제할까요?')) return
     await deleteDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', epId))
@@ -172,6 +186,46 @@ export default function NovelPage() {
       </header>
 
       <main className="mx-auto max-w-2xl p-6">
+
+        {/* 작품 설명 */}
+        <div className="mb-5">
+          {descEditing ? (
+            <textarea
+              autoFocus
+              value={descDraft}
+              onChange={(e) => setDescDraft(e.target.value)}
+              onBlur={saveDesc}
+              onKeyDown={(e) => { if (e.key === 'Escape') setDescEditing(false) }}
+              rows={2}
+              placeholder="작품 설명을 입력하세요"
+              className="w-full resize-none rounded-lg border border-indigo-300 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none dark:border-indigo-600 dark:bg-gray-800 dark:text-gray-200"
+            />
+          ) : (
+            <button
+              onClick={() => { setDescDraft(novel.description ?? ''); setDescEditing(true) }}
+              className="group w-full text-left"
+            >
+              {novel.description ? (
+                <p className="text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+                  {novel.description}
+                  <span className="ml-1.5 opacity-0 transition group-hover:opacity-100 text-gray-400">✎</span>
+                </p>
+              ) : (
+                <p className="text-sm italic text-gray-300 dark:text-gray-600">설명 추가…</p>
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* 통계 */}
+        {episodes.length > 0 && (
+          <div className="mb-6 flex items-center gap-2 rounded-lg bg-gray-50 px-4 py-2.5 text-sm text-gray-500 dark:bg-gray-900 dark:text-gray-400">
+            <span className="font-medium text-gray-700 dark:text-gray-200">{episodes.length}회차</span>
+            <span className="text-gray-300 dark:text-gray-700">·</span>
+            <span>총 <span className="font-medium text-gray-700 dark:text-gray-200">{episodes.reduce((s, ep) => s + (ep.charCount || 0), 0).toLocaleString()}</span>자 작성</span>
+          </div>
+        )}
+
         <div className="mb-6 flex items-center justify-between">
           <h2 className="font-semibold text-gray-700 dark:text-gray-300">회차 목록</h2>
           <button
