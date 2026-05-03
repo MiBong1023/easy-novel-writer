@@ -33,8 +33,18 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   })
 
   if (!res.ok) {
-    const err = await res.text()
-    return new Response(JSON.stringify({ error: err }), { status: res.status })
+    const errData = await res.json<{ error?: { type?: string; message?: string } }>().catch(() => null)
+    const msg = errData?.error?.message ?? '알 수 없는 오류가 발생했습니다.'
+    const friendly =
+      msg.includes('credit balance') || msg.includes('billing')
+        ? 'Anthropic API 크레딧이 부족합니다. console.anthropic.com/settings/billing 에서 충전해주세요.'
+        : msg.includes('API key')
+          ? 'API 키가 올바르지 않습니다. Cloudflare 환경 변수를 확인해주세요.'
+          : msg
+    return new Response(JSON.stringify({ error: friendly }), {
+      status: res.status,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
   const data = await res.json<{ content: { text: string }[] }>()
