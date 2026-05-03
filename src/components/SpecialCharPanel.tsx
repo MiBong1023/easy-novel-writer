@@ -51,7 +51,7 @@ export default function SpecialCharPanel({ onInsert }: Props) {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-10 flex items-center gap-2 border-t border-gray-200 bg-white/90 px-4 py-2 backdrop-blur dark:border-gray-700 dark:bg-gray-900/90">
+    <div className="flex shrink-0 items-center gap-2 border-t border-gray-200 bg-white px-4 py-2 dark:border-gray-700 dark:bg-gray-950">
       <span className="shrink-0 text-xs text-gray-400 dark:text-gray-500">특수문자</span>
       <div className="flex flex-1 flex-wrap gap-1">
         {chars.map(({ label, value }, idx) => (
