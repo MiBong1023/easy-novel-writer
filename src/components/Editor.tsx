@@ -21,9 +21,11 @@ interface Props {
   initialContent: string
   userId: string
   onContentChange?: (v: string) => void
+  focusMode?: boolean
+  onToggleFocusMode?: () => void
 }
 
-export default function Editor({ novelId, episodeId, initialContent, userId, onContentChange }: Props) {
+export default function Editor({ novelId, episodeId, initialContent, userId, onContentChange, focusMode, onToggleFocusMode }: Props) {
   const [value, setValue] = useState(initialContent)
   const [versionsOpen, setVersionsOpen] = useState(false)
   const [spellCheckOpen, setSpellCheckOpen] = useState(false)
@@ -97,19 +99,22 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
 
   return (
     <div className="flex h-full flex-col">
-      <ProgressBar
-        count={count}
-        countNoSpace={countNoSpace}
-        goal={goal}
-        percent={percent}
-        saveStatus={saveStatus}
-        onGoalChange={setGoal}
-        autoConvert={autoConvert}
-        onToggleAutoConvert={toggleAutoConvert}
-        onVersionHistoryOpen={() => setVersionsOpen(true)}
-        onSpellCheck={toggleSpellCheck}
-        spellCheckActive={spellCheckOpen}
-      />
+      {!focusMode && (
+        <ProgressBar
+          count={count}
+          countNoSpace={countNoSpace}
+          goal={goal}
+          percent={percent}
+          saveStatus={saveStatus}
+          onGoalChange={setGoal}
+          autoConvert={autoConvert}
+          onToggleAutoConvert={toggleAutoConvert}
+          onVersionHistoryOpen={() => setVersionsOpen(true)}
+          onSpellCheck={toggleSpellCheck}
+          spellCheckActive={spellCheckOpen}
+          onFocusMode={onToggleFocusMode ?? (() => {})}
+        />
+      )}
       <div className="relative flex-1 overflow-hidden">
         {fr.open && (
           <FindReplacePanel

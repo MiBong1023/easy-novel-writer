@@ -12,6 +12,7 @@ interface Props {
   onVersionHistoryOpen: () => void
   onSpellCheck: () => void
   spellCheckActive: boolean
+  onFocusMode: () => void
 }
 
 const STATUS_TEXT: Record<Props['saveStatus'], string> = {
@@ -21,7 +22,7 @@ const STATUS_TEXT: Record<Props['saveStatus'], string> = {
   error: '저장 실패',
 }
 
-export default function ProgressBar({ count, countNoSpace, goal, percent, saveStatus, onGoalChange, autoConvert, onToggleAutoConvert, onVersionHistoryOpen, onSpellCheck, spellCheckActive }: Props) {
+export default function ProgressBar({ count, countNoSpace, goal, percent, saveStatus, onGoalChange, autoConvert, onToggleAutoConvert, onVersionHistoryOpen, onSpellCheck, spellCheckActive, onFocusMode }: Props) {
   const [editing, setEditing] = useState(false)
   const [input, setInput] = useState(String(goal))
 
@@ -92,6 +93,13 @@ export default function ProgressBar({ count, countNoSpace, goal, percent, saveSt
           <span className={saveStatus === 'error' ? 'text-red-500' : 'text-gray-400 dark:text-gray-500'}>
             {STATUS_TEXT[saveStatus]}
           </span>
+          <button
+            onClick={onFocusMode}
+            title="집중 모드 (Esc로 나가기)"
+            className="text-gray-300 transition hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-300"
+          >
+            ⊞
+          </button>
         </span>
       </div>
       <div className="h-1 w-full rounded-full bg-gray-100 dark:bg-gray-800">
