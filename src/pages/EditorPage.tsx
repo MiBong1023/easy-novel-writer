@@ -72,7 +72,26 @@ export default function EditorPage() {
   }
 
   if (loading || fetching) {
-    return <div className="flex h-screen items-center justify-center text-gray-400">로딩 중…</div>
+    return (
+      <div className="flex h-screen flex-col bg-white dark:bg-gray-950">
+        {/* 헤더 스켈레톤 */}
+        <div className="flex shrink-0 animate-pulse items-center gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
+          <div className="h-4 w-10 rounded bg-gray-200 dark:bg-gray-800" />
+          <div className="h-4 flex-1 max-w-xs rounded bg-gray-200 dark:bg-gray-800" />
+        </div>
+        {/* 진행바 스켈레톤 */}
+        <div className="flex animate-pulse flex-col gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+          <div className="h-3 w-52 rounded bg-gray-100 dark:bg-gray-800" />
+          <div className="h-1 w-full rounded bg-gray-100 dark:bg-gray-800" />
+        </div>
+        {/* 본문 스켈레톤 */}
+        <div className="flex-1 animate-pulse space-y-3 p-10 md:px-16">
+          {[100, 95, 88, 100, 70, 100, 92, 60].map((w, i) => (
+            <div key={i} className={`h-4 rounded bg-gray-100 dark:bg-gray-800`} style={{ width: `${w}%` }} />
+          ))}
+        </div>
+      </div>
+    )
   }
 
   if (!episode || !user || !novelId || !episodeId) {

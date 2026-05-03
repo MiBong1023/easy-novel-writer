@@ -31,6 +31,9 @@ export default function NovelPage() {
   const [descEditing, setDescEditing] = useState(false)
   const [descDraft, setDescDraft] = useState('')
   const [epSearch, setEpSearch] = useState('')
+  const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const dragIndexRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -95,14 +98,23 @@ export default function NovelPage() {
 
   async function handleExportAll() {
     if (!user || !novelId || episodes.length === 0) return
+    setExportProgress({ current: 0, total: episodes.length })
+    let completed = 0
+    const epContents = await Promise.all(
+      episodes.map(async (ep) => {
+        const snap = await getDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', ep.id))
+        const content = snap.exists() ? (snap.data().content as string) : ''
+        completed++
+        setExportProgress({ current: completed, total: episodes.length })
+        return { ep, content }
+      })
+    )
     const lines: string[] = [`${novel?.title ?? '작품'}\n`]
-    for (const ep of episodes) {
-      const snap = await import('firebase/firestore').then(({ getDoc, doc }) =>
-        getDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', ep.id))
-      )
-      const content = snap.exists() ? (snap.data().content as string) : ''
-      lines.push(`${'='.repeat(40)}\n${ep.order}화 ${ep.title}\n${'='.repeat(40)}\n\n${content}`)
-    }
+    epContents
+      .sort((a, b) => a.ep.order - b.ep.order)
+      .forEach(({ ep, content }) => {
+        lines.push(`${'='.repeat(40)}\n${ep.order}화 ${ep.title}\n${'='.repeat(40)}\n\n${content}`)
+      })
     const blob = new Blob([lines.join('\n\n')], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -110,6 +122,7 @@ export default function NovelPage() {
     a.download = `${novel?.title ?? '작품'}.txt`
     a.click()
     URL.revokeObjectURL(url)
+    setExportProgress(null)
   }
 
   async function saveDesc() {
@@ -161,6 +174,25 @@ export default function NovelPage() {
     setEpisodes((prev) => prev.filter((ep) => ep.id !== epId))
   }
 
+  async function handleBatchDelete() {
+    if (!user || !novelId || selectedIds.size === 0) return
+    if (!window.confirm(`선택한 ${selectedIds.size}개 회차를 삭제할까요?`)) return
+    await Promise.all(
+      [...selectedIds].map((id) => deleteDoc(doc(db, 'users', user!.uid, 'novels', novelId!, 'episodes', id)))
+    )
+    setEpisodes((prev) => prev.filter((ep) => !selectedIds.has(ep.id)))
+    setSelectedIds(new Set())
+    setSelectMode(false)
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
   function handleDragStart(index: number) {
     dragIndexRef.current = index
   }
@@ -206,10 +238,13 @@ export default function NovelPage() {
           {episodes.length > 0 && (
             <button
               onClick={handleExportAll}
+              disabled={!!exportProgress}
               title="전체 회차 txt로 내보내기"
-              className="hidden sm:block shrink-0 text-sm text-gray-400 transition hover:text-gray-700 dark:hover:text-gray-200"
+              className="hidden sm:block shrink-0 text-sm text-gray-400 transition hover:text-gray-700 disabled:opacity-60 dark:hover:text-gray-200"
             >
-              ↓ 전체 내보내기
+              {exportProgress
+                ? `내보내는 중… ${exportProgress.current}/${exportProgress.total}`
+                : '↓ 전체 내보내기'}
             </button>
           )}
           <DarkModeToggle />
@@ -261,7 +296,7 @@ export default function NovelPage() {
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h2 className="font-semibold text-gray-700 dark:text-gray-300">회차 목록</h2>
-            {episodes.length > 1 && (
+            {episodes.length > 1 && !selectMode && (
               <button
                 onClick={handleReorderCleanup}
                 title="1화부터 순서 번호 다시 매기기"
@@ -271,12 +306,43 @@ export default function NovelPage() {
               </button>
             )}
           </div>
-          <button
-            onClick={() => setCreating(true)}
-            className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
-          >
-            + 새 회차
-          </button>
+          <div className="flex items-center gap-2">
+            {selectMode ? (
+              <>
+                {selectedIds.size > 0 && (
+                  <button
+                    onClick={handleBatchDelete}
+                    className="rounded-lg bg-red-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-600"
+                  >
+                    {selectedIds.size}개 삭제
+                  </button>
+                )}
+                <button
+                  onClick={() => { setSelectMode(false); setSelectedIds(new Set()) }}
+                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400"
+                >
+                  취소
+                </button>
+              </>
+            ) : (
+              <>
+                {episodes.length > 1 && (
+                  <button
+                    onClick={() => setSelectMode(true)}
+                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-400"
+                  >
+                    선택
+                  </button>
+                )}
+                <button
+                  onClick={() => setCreating(true)}
+                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+                >
+                  + 새 회차
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {episodes.length >= 5 && (
@@ -334,13 +400,28 @@ export default function NovelPage() {
             {visible.map((ep, index) => (
               <li
                 key={ep.id}
-                draggable
-                onDragStart={() => handleDragStart(index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDragEnd={handleDragEnd}
-                className="group flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 cursor-grab active:cursor-grabbing active:opacity-60"
+                draggable={!selectMode}
+                onDragStart={() => !selectMode && handleDragStart(index)}
+                onDragOver={(e) => !selectMode && handleDragOver(e, index)}
+                onDragEnd={() => !selectMode && handleDragEnd()}
+                className={`group flex items-center gap-2 rounded-xl border bg-white px-4 py-3 hover:shadow-sm dark:bg-gray-800 ${
+                  selectMode && selectedIds.has(ep.id)
+                    ? 'border-indigo-400 dark:border-indigo-600'
+                    : 'border-gray-200 dark:border-gray-700'
+                } ${selectMode ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing active:opacity-60'}`}
+                onClick={selectMode ? () => toggleSelect(ep.id) : undefined}
               >
-                <span className="text-gray-200 dark:text-gray-700 select-none" aria-hidden="true">⠿</span>
+                {selectMode ? (
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(ep.id)}
+                    onChange={() => toggleSelect(ep.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="h-4 w-4 shrink-0 rounded accent-indigo-500"
+                  />
+                ) : (
+                  <span className="text-gray-200 dark:text-gray-700 select-none" aria-hidden="true">⠿</span>
+                )}
                 {editingEpId === ep.id ? (
                   <input
                     autoFocus
@@ -367,7 +448,7 @@ export default function NovelPage() {
                     )}
                   </Link>
                 )}
-                {editingEpId !== ep.id && (
+                {!selectMode && editingEpId !== ep.id && (
                   <>
                     <button
                       onClick={() => startEditEp(ep)}
@@ -386,13 +467,13 @@ export default function NovelPage() {
                     </button>
                   </>
                 )}
-                <button
+                {!selectMode && <button
                   onClick={() => handleDeleteEpisode(ep.id)}
                   className="rounded p-1 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-red-500 dark:text-gray-600"
                   aria-label="삭제"
                 >
                   ✕
-                </button>
+                </button>}
               </li>
             ))}
           </ul>
