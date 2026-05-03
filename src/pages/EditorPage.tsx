@@ -20,6 +20,10 @@ export default function EditorPage() {
   const contentRef = useRef('')
 
   useEffect(() => {
+    if (!loading && !user) { navigate('/'); return }
+  }, [loading, user]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     if (!user || !novelId || !episodeId) return
     setFetching(true)
     const epRef = doc(db, 'users', user.uid, 'novels', novelId, 'episodes', episodeId)

@@ -1,6 +1,6 @@
 # 쉬운 소설 작가 — 구조 문서
 
-> 마지막 업데이트: 2026-05-03
+> 마지막 업데이트: 2026-05-03 (홈 화면 랜딩 페이지 개편, 익명 로그인 제거)
 
 ---
 
@@ -12,7 +12,7 @@
 | 스타일 | Tailwind CSS v4 (`@tailwindcss/vite` 플러그인, postcss 불필요) |
 | 라우팅 | React Router v7 |
 | 데이터베이스 | Firebase Firestore v12 |
-| 인증 | Firebase Anonymous Auth → Google 로그인으로 업그레이드 |
+| 인증 | Firebase Google Auth (익명 로그인 제거) |
 | 배포 | Cloudflare Pages (`npm run build` → `dist/`) |
 | 서버리스 함수 | Cloudflare Pages Functions (`functions/api/`) |
 
@@ -39,9 +39,32 @@ users/{uid}/
 ### 1. 홈 화면 `/`
 **파일:** `src/pages/HomePage.tsx`
 
+비로그인 상태에서는 **랜딩 페이지**를 표시. 로그인 후 작품 목록으로 전환.
+
+#### 랜딩 페이지 (비로그인)
 ```
 ┌──────────────────────────────────────────────┐
-│ 헤더: 앱 제목 | 다크모드 | +새작품 | 로그인버튼  │
+│ 헤더: 앱 이름(좌)        다크모드 토글(우)      │
+├──────────────────────────────────────────────┤
+│                                              │
+│        ✦ 한국어 소설 창작 전용 에디터           │  ← 뱃지
+│                                              │
+│          글쓰기에만                           │
+│          집중하세요          ← 그라디언트 타이틀 │
+│                                              │
+│     방해 없는 깔끔한 에디터로…               │  ← 서브타이틀
+│                                              │
+│   [자동저장] [버전기록] [맞춤법검사] …         │  ← 기능 태그
+│                                              │
+│       [ G  Google로 시작하기 ]               │  ← CTA 버튼
+│                                              │
+└──────────────────────────────────────────────┘
+```
+
+#### 작품 목록 (로그인 후)
+```
+┌──────────────────────────────────────────────┐
+│ 헤더: 앱 제목 | 다크모드 | +새작품 | 프로필   │
 ├──────────────────────────────────────────────┤
 │  [작품카드]  [작품카드]  [작품카드]             │
 └──────────────────────────────────────────────┘
@@ -51,6 +74,7 @@ users/{uid}/
 - 작품 목록 (3열 그리드)
 - 작품 이름 인라인 수정 가능 (카드 호버 시 ✎ 버튼)
 - 작품 삭제 (카드 호버 시 ✕ 버튼)
+- 우상단 프로필 버튼 → 이름 표시 + 로그아웃
 
 ---
 
@@ -192,8 +216,8 @@ div.overflow-hidden
 | `useGoal` | `src/hooks/useGoal.ts` | 회차별 목표 글자수 (`localStorage`) |
 | `useWordCount` | `src/hooks/useWordCount.ts` | 전체/공백제외 글자수, 달성률(%) |
 | `useNotes` | `src/hooks/useNotes.ts` | Firestore 메모 CRUD |
-| `useAuth` | `src/hooks/useAuth.ts` | Firebase 인증 상태 구독 |
-| `useGoogleLogin` | `src/hooks/useGoogleLogin.ts` | 익명 → Google 계정 업그레이드 or 로그인 |
+| `useAuth` | `src/hooks/useAuth.ts` | Firebase 인증 상태 구독 (user, loading 반환) |
+| `useGoogleLogin` | `src/hooks/useGoogleLogin.ts` | Google 로그인 팝업 처리 |
 | `useDarkMode` | `src/hooks/useDarkMode.ts` | 다크모드 토글, `localStorage` + `html.dark` 클래스 |
 
 ---

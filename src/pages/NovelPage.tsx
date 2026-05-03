@@ -31,6 +31,10 @@ export default function NovelPage() {
   const dragIndexRef = useRef<number | null>(null)
 
   useEffect(() => {
+    if (!loading && !user) { navigate('/'); return }
+  }, [loading, user]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     if (!user || !novelId) return
     const novelRef = doc(db, 'users', user.uid, 'novels', novelId)
     getDoc(novelRef).then((snap) => {
