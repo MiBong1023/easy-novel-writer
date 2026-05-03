@@ -32,4 +32,28 @@
   .dark mark {
     background-color: rgba(161, 98, 7, 0.55);
   }
+
+  /* 맞춤법 오류 — 빨간 배경 + 아랫줄 */
+  mark.spell,
+  mark.space_spell {
+    background-color: rgba(239, 68, 68, 0.2);
+    border-bottom: 2px solid rgba(239, 68, 68, 0.8);
+  }
+
+  /* 띄어쓰기 오류 — 파란 배경 + 아랫줄 */
+  mark.space {
+    background-color: rgba(59, 130, 246, 0.2);
+    border-bottom: 2px solid rgba(59, 130, 246, 0.8);
+  }
+
+  .dark mark.spell,
+  .dark mark.space_spell {
+    background-color: rgba(239, 68, 68, 0.35);
+    border-bottom-color: rgba(239, 68, 68, 0.9);
+  }
+
+  .dark mark.space {
+    background-color: rgba(59, 130, 246, 0.35);
+    border-bottom-color: rgba(59, 130, 246, 0.9);
+  }
 }

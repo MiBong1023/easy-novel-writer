@@ -7,6 +7,7 @@ import { useGoal } from '@/hooks/useGoal'
 import { useFindReplace } from '@/hooks/useFindReplace'
 import { useSpellCheck } from '@/hooks/useSpellCheck'
 import type { SpellError } from '@/hooks/useSpellCheck'
+import type { Highlight } from './HighlightTextarea'
 import ProgressBar from './ProgressBar'
 import SpecialCharPanel from './SpecialCharPanel'
 import FindReplacePanel from './FindReplacePanel'
@@ -65,6 +66,22 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
     setValue(newValue)
     onContentChange?.(newValue)
     sc.dismissError(index)
+  }
+
+  // 맞춤법 오류의 텍스트 위치를 찾아 Highlight 배열로 변환
+  function getSpellHighlights(errors: SpellError[]): Highlight[] {
+    const result: Highlight[] = []
+    for (const error of errors) {
+      if (!error.original) continue
+      let from = 0
+      while (true) {
+        const pos = value.indexOf(error.original, from)
+        if (pos === -1) break
+        result.push({ start: pos, end: pos + error.original.length, type: error.errorType })
+        from = pos + error.original.length
+      }
+    }
+    return result
   }
 
   function applyAll() {
@@ -133,7 +150,10 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
         <HighlightTextarea
           ref={ref}
           value={value}
-          highlights={fr.open ? fr.highlights : []}
+          highlights={[
+            ...(fr.open ? fr.highlights : []),
+            ...(spellCheckOpen && sc.checked ? getSpellHighlights(sc.errors) : []),
+          ].sort((a, b) => a.start - b.start)}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           spellCheck={false}
