@@ -85,12 +85,12 @@ export default function EditorPage() {
     <div className="flex h-screen flex-col bg-white dark:bg-gray-950">
       {/* 헤더: 집중 모드일 때 숨김 */}
       {!focusMode && (
-        <header className="flex shrink-0 items-center gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-800">
+        <header className="flex shrink-0 items-center gap-1 border-b border-gray-200 px-3 py-3 dark:border-gray-800 sm:gap-2 sm:px-4">
           <Link
             to={`/novels/${novelId}`}
-            className="text-sm text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            className="shrink-0 text-sm text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
           >
-            ← 목록
+            ← <span className="hidden sm:inline">목록</span>
           </Link>
           <span className="flex-1 truncate text-sm font-medium text-gray-700 dark:text-gray-300">
             {episode.title}
@@ -123,12 +123,12 @@ export default function EditorPage() {
           <button
             onClick={handleExport}
             title="txt로 내보내기"
-            className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            className="hidden sm:block rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
           >
             ↓ txt
           </button>
-          <DarkModeToggle />
-          <AuthButton user={user} />
+          <div className="hidden sm:block"><DarkModeToggle /></div>
+          <div className="hidden sm:block"><AuthButton user={user} /></div>
         </header>
       )}
 

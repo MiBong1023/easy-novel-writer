@@ -186,23 +186,23 @@ export default function NovelPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <header className="border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-800 dark:bg-gray-900">
+      <header className="border-b border-gray-200 bg-white px-4 py-4 dark:border-gray-800 dark:bg-gray-900 sm:px-6">
         <div className="mx-auto flex max-w-2xl items-center gap-3">
-          <Link to="/" className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-            ← 목록
+          <Link to="/" className="shrink-0 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+            ← <span className="hidden sm:inline">목록</span>
           </Link>
           <h1 className="flex-1 truncate text-lg font-bold text-gray-800 dark:text-gray-100">{novel.title}</h1>
           {episodes.length > 0 && (
             <button
               onClick={handleExportAll}
               title="전체 회차 txt로 내보내기"
-              className="text-sm text-gray-400 transition hover:text-gray-700 dark:hover:text-gray-200"
+              className="hidden sm:block shrink-0 text-sm text-gray-400 transition hover:text-gray-700 dark:hover:text-gray-200"
             >
               ↓ 전체 내보내기
             </button>
           )}
           <DarkModeToggle />
-          {user && <AuthButton user={user} />}
+          {user && <div className="hidden sm:block"><AuthButton user={user} /></div>}
         </div>
       </header>
 

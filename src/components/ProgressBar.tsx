@@ -82,8 +82,8 @@ export default function ProgressBar({
             </button>
           )}
           <span>자 ({percent}%)</span>
-          <span className="text-gray-200 dark:text-gray-700">·</span>
-          <span>공백 제외 {countNoSpace.toLocaleString()}자</span>
+          <span className="hidden sm:inline text-gray-200 dark:text-gray-700">·</span>
+          <span className="hidden sm:inline">공백 제외 {countNoSpace.toLocaleString()}자</span>
           {saveStatus !== 'idle' && (
             <>
               <span className="text-gray-200 dark:text-gray-700">·</span>
@@ -110,14 +110,14 @@ export default function ProgressBar({
           <button
             onClick={onVersionHistoryOpen}
             title="버전 기록"
-            className="rounded-md border border-gray-200 px-2.5 py-1 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            className="hidden sm:block rounded-md border border-gray-200 px-2.5 py-1 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
           >
             기록
           </button>
           <button
             onClick={onToggleAutoConvert}
             title="자동 변환 (…, —, 스마트 따옴표)"
-            className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
+            className={`hidden sm:block rounded-md border px-2.5 py-1 text-xs transition-colors ${
               autoConvert
                 ? 'border-indigo-300 bg-indigo-50 text-indigo-600 dark:border-indigo-700 dark:bg-indigo-950 dark:text-indigo-400'
                 : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-600 dark:border-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300'
@@ -126,13 +126,13 @@ export default function ProgressBar({
             자동변환
           </button>
 
-          {/* 글자 크기 */}
-          <div className="mx-1 h-4 w-px bg-gray-200 dark:bg-gray-700" />
+          {/* 글자 크기: 데스크탑만 */}
+          <div className="hidden sm:block mx-1 h-4 w-px bg-gray-200 dark:bg-gray-700" />
           <button
             onClick={onFontDecrease}
             disabled={!canFontDecrease}
             title="글자 작게"
-            className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-30 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            className="hidden sm:block rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-30 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
           >
             A-
           </button>
@@ -140,18 +140,18 @@ export default function ProgressBar({
             onClick={onFontIncrease}
             disabled={!canFontIncrease}
             title="글자 크게"
-            className="rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-30 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            className="hidden sm:block rounded-md border border-gray-200 px-2 py-1 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-30 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
           >
             A+
           </button>
 
           {/* AI / 집중 모드 구분선 */}
-          <div className="mx-1 h-4 w-px bg-gray-200 dark:bg-gray-700" />
+          <div className="hidden sm:block mx-1 h-4 w-px bg-gray-200 dark:bg-gray-700" />
 
           <button
             onClick={onAI}
             title="AI 글쓰기 보조"
-            className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
+            className={`hidden sm:block rounded-md border px-2.5 py-1 text-xs transition-colors ${
               aiActive
                 ? 'border-indigo-300 bg-indigo-50 text-indigo-600 dark:border-indigo-700 dark:bg-indigo-950 dark:text-indigo-400'
                 : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'
