@@ -9,6 +9,7 @@ import {
   doc,
   query,
   orderBy,
+  limit,
   serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -101,6 +102,40 @@ function GoogleIcon() {
   )
 }
 
+const SORT_OPTIONS = [
+  {
+    key: 'updated' as const,
+    label: '최근',
+    icon: (
+      <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="8" cy="8" r="6.5" />
+        <path strokeLinecap="round" d="M8 5v3.5l2 1.5" />
+      </svg>
+    ),
+  },
+  {
+    key: 'title' as const,
+    label: '제목',
+    icon: (
+      <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" d="M3 4h10M3 8h7M3 12h5" />
+      </svg>
+    ),
+  },
+  {
+    key: 'episodes' as const,
+    label: '회차',
+    icon: (
+      <svg className="h-3.5 w-3.5 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path strokeLinecap="round" d="M6 4h7M6 8h7M6 12h7" />
+        <circle cx="3" cy="4" r="1" fill="currentColor" stroke="none" />
+        <circle cx="3" cy="8" r="1" fill="currentColor" stroke="none" />
+        <circle cx="3" cy="12" r="1" fill="currentColor" stroke="none" />
+      </svg>
+    ),
+  },
+]
+
 // ── 작품 목록 ─────────────────────────────────────────────────
 
 export default function HomePage() {
@@ -162,6 +197,23 @@ export default function HomePage() {
     if (!user) return
     await updateDoc(doc(db, 'users', user.uid, 'novels', id), { color })
     setNovels((prev) => prev.map((n) => (n.id === id ? { ...n, color } : n)))
+  }
+
+  async function handleCardClick(id: string) {
+    const novel = novels.find((n) => n.id === id)
+    if (!user || !novel) return
+    if (novel.episodeCount === 0) {
+      navigate(`/novels/${id}`)
+      return
+    }
+    const epSnap = await getDocs(
+      query(collection(db, 'users', user.uid, 'novels', id, 'episodes'), orderBy('updatedAt', 'desc'), limit(1))
+    )
+    if (!epSnap.empty) {
+      navigate(`/novels/${id}/episodes/${epSnap.docs[0].id}`)
+    } else {
+      navigate(`/novels/${id}`)
+    }
   }
 
   async function handleDelete(id: string) {
@@ -243,17 +295,18 @@ export default function HomePage() {
               className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-700 shadow-sm placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-600"
             />
             <div className="flex rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800 overflow-hidden">
-              {(['updated', 'title', 'episodes'] as const).map((key) => (
+              {SORT_OPTIONS.map(({ key, label, icon }) => (
                 <button
                   key={key}
                   onClick={() => setSortBy(key)}
-                  className={`px-3 py-2 text-xs transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-2 text-xs transition-colors ${
                     sortBy === key
                       ? 'bg-indigo-600 text-white'
                       : 'text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-700'
                   }`}
                 >
-                  {key === 'updated' ? '최근' : key === 'title' ? '제목' : '회차'}
+                  {icon}
+                  <span className="hidden sm:inline">{label}</span>
                 </button>
               ))}
             </div>
@@ -319,7 +372,7 @@ export default function HomePage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredNovels.map((n) => (
-              <NovelCard key={n.id} novel={n} onDelete={handleDelete} onRename={handleRename} onColorChange={handleColorChange} />
+              <NovelCard key={n.id} novel={n} onDelete={handleDelete} onRename={handleRename} onColorChange={handleColorChange} onCardClick={handleCardClick} />
             ))}
           </div>
         )}

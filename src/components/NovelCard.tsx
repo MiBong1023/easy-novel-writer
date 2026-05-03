@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import type { Novel, NovelColor } from '@/types'
 import { NOVEL_COLORS } from '@/types'
 
@@ -8,6 +7,7 @@ interface Props {
   onDelete: (id: string) => void
   onRename: (id: string, title: string) => void
   onColorChange: (id: string, color: NovelColor) => void
+  onCardClick: (id: string) => void
 }
 
 const COLOR_STYLES: Record<NovelColor, { bar: string; badge: string; dot: string }> = {
@@ -31,7 +31,7 @@ function timeAgo(date: Date): string {
   return date.toLocaleDateString('ko-KR')
 }
 
-export default function NovelCard({ novel, onDelete, onRename, onColorChange }: Props) {
+export default function NovelCard({ novel, onDelete, onRename, onColorChange, onCardClick }: Props) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -65,7 +65,7 @@ export default function NovelCard({ novel, onDelete, onRename, onColorChange }: 
           {NOVEL_COLORS.map((c) => (
             <button
               key={c}
-              onClick={(e) => { e.preventDefault(); onColorChange(novel.id, c) }}
+              onClick={(e) => { e.stopPropagation(); onColorChange(novel.id, c) }}
               className={`h-4 w-4 rounded-full border-2 transition-transform hover:scale-125 ${COLOR_STYLES[c].dot} ${c === color ? 'border-white shadow-sm' : 'border-transparent'}`}
               aria-label={c}
             />
@@ -77,14 +77,14 @@ export default function NovelCard({ novel, onDelete, onRename, onColorChange }: 
       {!editing && (
         <div className="absolute right-3 top-11 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
           <button
-            onClick={startEdit}
+            onClick={(e) => { e.stopPropagation(); startEdit() }}
             className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
             aria-label="제목 수정"
           >
             ✎
           </button>
           <button
-            onClick={() => onDelete(novel.id)}
+            onClick={(e) => { e.stopPropagation(); onDelete(novel.id) }}
             className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/30 dark:hover:text-red-400"
             aria-label="삭제"
           >
@@ -106,7 +106,7 @@ export default function NovelCard({ novel, onDelete, onRename, onColorChange }: 
           />
         </div>
       ) : (
-        <Link to={`/novels/${novel.id}`} className="flex flex-1 flex-col p-5">
+        <div onClick={() => onCardClick(novel.id)} className="flex flex-1 cursor-pointer flex-col p-5">
           {/* 제목 */}
           <h2 className="mb-2 pr-16 text-lg font-bold leading-snug text-gray-800 transition-colors group-hover:text-indigo-600 dark:text-gray-100 dark:group-hover:text-indigo-400">
             {novel.title}
@@ -127,7 +127,7 @@ export default function NovelCard({ novel, onDelete, onRename, onColorChange }: 
               {timeAgo(novel.updatedAt)}
             </span>
           </div>
-        </Link>
+        </div>
       )}
     </div>
   )
