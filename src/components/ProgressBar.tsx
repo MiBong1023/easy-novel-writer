@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 interface Props {
   count: number
@@ -21,12 +21,6 @@ interface Props {
   aiActive: boolean
 }
 
-const STATUS_TEXT: Record<Props['saveStatus'], string> = {
-  idle: '',
-  saving: '저장 중…',
-  saved: '저장됨',
-  error: '저장 실패',
-}
 
 export default function ProgressBar({
   count, countNoSpace, goal, percent, saveStatus, onGoalChange,
@@ -37,6 +31,15 @@ export default function ProgressBar({
 }: Props) {
   const [editing, setEditing] = useState(false)
   const [input, setInput] = useState(String(goal))
+  const [savedVisible, setSavedVisible] = useState(false)
+
+  useEffect(() => {
+    if (saveStatus === 'saved') {
+      setSavedVisible(true)
+      const t = setTimeout(() => setSavedVisible(false), 2000)
+      return () => clearTimeout(t)
+    }
+  }, [saveStatus])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -84,14 +87,25 @@ export default function ProgressBar({
           <span>자 ({percent}%)</span>
           <span className="hidden sm:inline text-gray-200 dark:text-gray-700">·</span>
           <span className="hidden sm:inline">공백 제외 {countNoSpace.toLocaleString()}자</span>
-          {saveStatus !== 'idle' && (
+          {saveStatus === 'saving' && (
             <>
               <span className="text-gray-200 dark:text-gray-700">·</span>
-              <span className={saveStatus === 'error' ? 'text-red-500' : ''}>
-                {STATUS_TEXT[saveStatus]}
-              </span>
+              <span>저장 중…</span>
             </>
           )}
+          {saveStatus === 'error' && (
+            <>
+              <span className="text-gray-200 dark:text-gray-700">·</span>
+              <span className="text-red-500">저장 실패</span>
+            </>
+          )}
+          <span
+            className={`ml-1 text-emerald-500 transition-opacity duration-700 dark:text-emerald-400 ${
+              savedVisible ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            ✓
+          </span>
         </span>
 
         {/* 오른쪽: 액션 버튼 그룹 */}

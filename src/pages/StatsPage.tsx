@@ -10,19 +10,24 @@ interface DayStat {
   charsAdded: number
 }
 
+interface NovelStat {
+  id: string
+  title: string
+  episodeCount: number
+  totalChars: number
+  color?: string
+}
+
 function getStreak(stats: DayStat[]): number {
   const map = new Map(stats.map((s) => [s.date, s.charsAdded]))
   let streak = 0
   const d = new Date()
-  // 오늘 기록이 없으면 어제부터 시작
   const todayKey = d.toISOString().slice(0, 10)
   if (!map.get(todayKey)) d.setDate(d.getDate() - 1)
   while (true) {
     const key = d.toISOString().slice(0, 10)
-    if ((map.get(key) ?? 0) > 0) {
-      streak++
-      d.setDate(d.getDate() - 1)
-    } else break
+    if ((map.get(key) ?? 0) > 0) { streak++; d.setDate(d.getDate() - 1) }
+    else break
   }
   return streak
 }
@@ -40,10 +45,16 @@ function formatDate(dateStr: string): string {
   return `${d.getMonth() + 1}/${d.getDate()}`
 }
 
+const COLOR_BAR: Record<string, string> = {
+  indigo: 'bg-indigo-400', rose: 'bg-rose-400', emerald: 'bg-emerald-400',
+  amber: 'bg-amber-400', violet: 'bg-violet-400', sky: 'bg-sky-400',
+}
+
 export default function StatsPage() {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
   const [stats, setStats] = useState<DayStat[]>([])
+  const [novelStats, setNovelStats] = useState<NovelStat[]>([])
   const [fetching, setFetching] = useState(true)
 
   useEffect(() => {
@@ -52,8 +63,26 @@ export default function StatsPage() {
 
   useEffect(() => {
     if (!user) return
-    getDocs(collection(db, 'users', user.uid, 'stats')).then((snap) => {
-      setStats(snap.docs.map((d) => d.data() as DayStat))
+    Promise.all([
+      getDocs(collection(db, 'users', user.uid, 'stats')),
+      getDocs(collection(db, 'users', user.uid, 'novels')),
+    ]).then(async ([statsSnap, novelsSnap]) => {
+      setStats(statsSnap.docs.map((d) => d.data() as DayStat))
+
+      const results = await Promise.all(
+        novelsSnap.docs.map(async (novelDoc) => {
+          const epSnap = await getDocs(collection(db, 'users', user.uid, 'novels', novelDoc.id, 'episodes'))
+          const totalChars = epSnap.docs.reduce((sum, ep) => sum + ((ep.data().charCount as number) || 0), 0)
+          return {
+            id: novelDoc.id,
+            title: novelDoc.data().title as string,
+            episodeCount: novelDoc.data().episodeCount as number ?? 0,
+            totalChars,
+            color: novelDoc.data().color as string | undefined,
+          }
+        })
+      )
+      setNovelStats(results.filter((n) => n.totalChars > 0).sort((a, b) => b.totalChars - a.totalChars))
       setFetching(false)
     })
   }, [user])
@@ -78,6 +107,8 @@ export default function StatsPage() {
   const chartData = days.map((d) => ({ date: d, value: map.get(d) ?? 0 }))
   const maxVal = Math.max(...chartData.map((d) => d.value), 1)
 
+  const maxNovelChars = Math.max(...novelStats.map((n) => n.totalChars), 1)
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <header className="border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-800 dark:bg-gray-900">
@@ -90,7 +121,7 @@ export default function StatsPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl p-6 space-y-6">
+      <main className="mx-auto max-w-2xl space-y-6 p-6">
 
         {/* 주요 지표 카드 */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -109,7 +140,6 @@ export default function StatsPage() {
               const heightPct = Math.max((value / maxVal) * 100, value > 0 ? 4 : 0)
               return (
                 <div key={date} className="group relative flex flex-1 flex-col items-center justify-end gap-1">
-                  {/* 툴팁 */}
                   {value > 0 && (
                     <div className="pointer-events-none absolute bottom-full mb-1 hidden rounded bg-gray-800 px-1.5 py-0.5 text-xs text-white group-hover:block dark:bg-gray-600">
                       {value.toLocaleString()}자
@@ -117,11 +147,7 @@ export default function StatsPage() {
                   )}
                   <div
                     className={`w-full rounded-t transition-all ${
-                      isToday
-                        ? 'bg-indigo-500'
-                        : value > 0
-                          ? 'bg-indigo-300 dark:bg-indigo-700'
-                          : 'bg-gray-100 dark:bg-gray-700'
+                      isToday ? 'bg-indigo-500' : value > 0 ? 'bg-indigo-300 dark:bg-indigo-700' : 'bg-gray-100 dark:bg-gray-700'
                     }`}
                     style={{ height: `${heightPct}%` }}
                   />
@@ -133,6 +159,43 @@ export default function StatsPage() {
             })}
           </div>
         </div>
+
+        {/* 작품별 현황 */}
+        {novelStats.length > 0 && (
+          <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+            <h2 className="mb-4 text-sm font-semibold text-gray-600 dark:text-gray-300">작품별 현황</h2>
+            <ul className="space-y-3">
+              {novelStats.map((n) => {
+                const barWidth = Math.max((n.totalChars / maxNovelChars) * 100, 2)
+                const barColor = COLOR_BAR[n.color ?? 'indigo'] ?? 'bg-indigo-400'
+                return (
+                  <li key={n.id}>
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <Link
+                        to={`/novels/${n.id}`}
+                        className="truncate text-sm font-medium text-gray-700 hover:text-indigo-600 dark:text-gray-200 dark:hover:text-indigo-400"
+                      >
+                        {n.title}
+                      </Link>
+                      <div className="flex shrink-0 items-center gap-2 text-xs text-gray-400">
+                        <span>{n.episodeCount}화</span>
+                        <span className="font-medium text-gray-600 dark:text-gray-300">
+                          {n.totalChars.toLocaleString()}자
+                        </span>
+                      </div>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                        style={{ width: `${barWidth}%` }}
+                      />
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
 
         {stats.length === 0 && (
           <p className="text-center text-sm text-gray-400 dark:text-gray-600">

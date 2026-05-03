@@ -124,6 +124,17 @@ export default function NovelPage() {
     setNovel((prev) => prev ? { ...prev, description: trimmed } : prev)
   }
 
+  async function handleReorderCleanup() {
+    if (!user || !novelId || episodes.length === 0) return
+    const updated = episodes.map((ep, i) => ({ ...ep, order: i + 1 }))
+    setEpisodes(updated)
+    await Promise.all(
+      updated.map((ep) =>
+        updateDoc(doc(db, 'users', user!.uid, 'novels', novelId!, 'episodes', ep.id), { order: ep.order })
+      )
+    )
+  }
+
   async function handleCopyEpisode(ep: Episode) {
     if (!user || !novelId) return
     const snap = await getDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', ep.id))
@@ -248,7 +259,18 @@ export default function NovelPage() {
         )}
 
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-semibold text-gray-700 dark:text-gray-300">회차 목록</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold text-gray-700 dark:text-gray-300">회차 목록</h2>
+            {episodes.length > 1 && (
+              <button
+                onClick={handleReorderCleanup}
+                title="1화부터 순서 번호 다시 매기기"
+                className="text-xs text-gray-400 hover:text-indigo-500 dark:text-gray-600 dark:hover:text-indigo-400"
+              >
+                순서 정리
+              </button>
+            )}
+          </div>
           <button
             onClick={() => setCreating(true)}
             className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
