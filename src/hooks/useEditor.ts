@@ -42,22 +42,24 @@ export function useEditor(
         if (autoConvert) {
           if (selectionStart !== selectionEnd) {
             const selected = v.slice(selectionStart, selectionEnd)
-            const next = before + '“' + selected + '”' + after
+            const next = before + '”' + selected + '”' + after
             onChange(next)
             openDoubleQuote = false
+            const pos = selectionStart + selected.length + 2
             requestAnimationFrame(() => {
-              ta.selectionStart = ta.selectionEnd = selectionStart + selected.length + 2
+              ta.setSelectionRange(pos, pos)
             })
             return
           }
-          const quote = openDoubleQuote ? '”' : '“'
+          const quote = openDoubleQuote ? '”' : '”'
           openDoubleQuote = !openDoubleQuote
           onChange(before + quote + after)
         } else {
           onChange(before + '”' + after)
         }
+        const pos = selectionStart + 1
         requestAnimationFrame(() => {
-          ta.selectionStart = ta.selectionEnd = selectionStart + 1
+          ta.setSelectionRange(pos, pos)
         })
         return
       }
@@ -68,8 +70,9 @@ export function useEditor(
         const before = v.slice(0, selectionStart)
         const after = v.slice(selectionEnd)
         onChange(before + '  ' + after)
+        const pos = selectionStart + 2
         requestAnimationFrame(() => {
-          ta.selectionStart = ta.selectionEnd = selectionStart + 2
+          ta.setSelectionRange(pos, pos)
         })
       }
     },
@@ -87,12 +90,14 @@ export function useEditor(
         const pos = e.target.selectionStart - (raw.length - next.length)
         onChange(next)
         requestAnimationFrame(() => {
-          if (ref.current) {
-            ref.current.selectionStart = ref.current.selectionEnd = pos
-          }
+          if (ref.current) ref.current.setSelectionRange(pos, pos)
         })
       } else {
+        const pos = e.target.selectionEnd
         onChange(raw)
+        requestAnimationFrame(() => {
+          if (ref.current) ref.current.setSelectionRange(pos, pos)
+        })
       }
     },
     [value, onChange],
@@ -108,7 +113,7 @@ export function useEditor(
       onChange(next)
       requestAnimationFrame(() => {
         ta.focus()
-        ta.selectionStart = ta.selectionEnd = start + char.length
+        ta.setSelectionRange(start + char.length, start + char.length)
       })
     },
     [value, onChange],
