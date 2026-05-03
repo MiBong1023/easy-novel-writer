@@ -22,6 +22,23 @@ function transformTyping(text: string, inserted: string): string {
   return text
 }
 
+// HTML spec says setSelectionRange "may" scroll — not guaranteed.
+// Manually adjust scrollTop so the cursor line is always visible.
+function scrollToCursor(ta: HTMLTextAreaElement, pos: number) {
+  const style = window.getComputedStyle(ta)
+  const lh = parseFloat(style.lineHeight) || 32
+  const pad = parseFloat(style.paddingTop) || 24
+  // Count logical lines before cursor (accurate when lines don't wrap)
+  const linesBefore = ta.value.slice(0, pos).split('\n').length - 1
+  const cursorTop = pad + linesBefore * lh
+  const cursorBottom = cursorTop + lh
+  if (cursorBottom > ta.scrollTop + ta.clientHeight) {
+    ta.scrollTop = cursorBottom - ta.clientHeight + lh
+  } else if (cursorTop < ta.scrollTop) {
+    ta.scrollTop = Math.max(0, cursorTop - pad)
+  }
+}
+
 export function useEditor(
   value: string,
   onChange: (v: string) => void,
@@ -34,32 +51,34 @@ export function useEditor(
       const ta = e.currentTarget
       const { selectionStart, selectionEnd, value: v } = ta
 
-      // Smart double-quote on “
-      if (e.key === '”') {
+      // Smart double-quote on "
+      if (e.key === '"') {
         e.preventDefault()
         const before = v.slice(0, selectionStart)
         const after = v.slice(selectionEnd)
         if (autoConvert) {
           if (selectionStart !== selectionEnd) {
             const selected = v.slice(selectionStart, selectionEnd)
-            const next = before + '”' + selected + '”' + after
+            const next = before + '“' + selected + '”' + after
             onChange(next)
             openDoubleQuote = false
             const pos = selectionStart + selected.length + 2
             requestAnimationFrame(() => {
               ta.setSelectionRange(pos, pos)
+              scrollToCursor(ta, pos)
             })
             return
           }
-          const quote = openDoubleQuote ? '”' : '”'
+          const quote = openDoubleQuote ? '”' : '“'
           openDoubleQuote = !openDoubleQuote
           onChange(before + quote + after)
         } else {
-          onChange(before + '”' + after)
+          onChange(before + '"' + after)
         }
         const pos = selectionStart + 1
         requestAnimationFrame(() => {
           ta.setSelectionRange(pos, pos)
+          scrollToCursor(ta, pos)
         })
         return
       }
@@ -73,6 +92,7 @@ export function useEditor(
         const pos = selectionStart + 2
         requestAnimationFrame(() => {
           ta.setSelectionRange(pos, pos)
+          scrollToCursor(ta, pos)
         })
       }
     },
@@ -90,13 +110,17 @@ export function useEditor(
         const pos = e.target.selectionStart - (raw.length - next.length)
         onChange(next)
         requestAnimationFrame(() => {
-          if (ref.current) ref.current.setSelectionRange(pos, pos)
+          if (!ref.current) return
+          ref.current.setSelectionRange(pos, pos)
+          scrollToCursor(ref.current, pos)
         })
       } else {
         const pos = e.target.selectionEnd
         onChange(raw)
         requestAnimationFrame(() => {
-          if (ref.current) ref.current.setSelectionRange(pos, pos)
+          if (!ref.current) return
+          ref.current.setSelectionRange(pos, pos)
+          scrollToCursor(ref.current, pos)
         })
       }
     },
@@ -113,7 +137,9 @@ export function useEditor(
       onChange(next)
       requestAnimationFrame(() => {
         ta.focus()
-        ta.setSelectionRange(start + char.length, start + char.length)
+        const pos = start + char.length
+        ta.setSelectionRange(pos, pos)
+        scrollToCursor(ta, pos)
       })
     },
     [value, onChange],
