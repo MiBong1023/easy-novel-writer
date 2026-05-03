@@ -1,0 +1,18 @@
+{
+  "name": "쉬운 소설 작가",
+  "short_name": "소설 작가",
+  "description": "방해 없는 깔끔한 한국어 소설 창작 에디터",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
