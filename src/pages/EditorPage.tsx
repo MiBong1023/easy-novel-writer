@@ -15,6 +15,7 @@ export default function EditorPage() {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
   const [episode, setEpisode] = useState<Episode | null>(null)
+  const [novelTitle, setNovelTitle] = useState('')
   const [siblings, setSiblings] = useState<{ id: string; order: number }[]>([])
   const [fetching, setFetching] = useState(true)
   const [notesOpen, setNotesOpen] = useState(false)
@@ -30,11 +31,13 @@ export default function EditorPage() {
     if (!user || !novelId || !episodeId) return
     setFetching(true)
     const epRef = doc(db, 'users', user.uid, 'novels', novelId, 'episodes', episodeId)
+    const novelRef = doc(db, 'users', user.uid, 'novels', novelId)
     const listRef = collection(db, 'users', user.uid, 'novels', novelId, 'episodes')
     Promise.all([
       getDoc(epRef),
+      getDoc(novelRef),
       getDocs(query(listRef, orderBy('order', 'asc'))),
-    ]).then(([snap, listSnap]) => {
+    ]).then(([snap, novelSnap, listSnap]) => {
       if (snap.exists()) {
         const data = snap.data()
         const ep: Episode = {
@@ -45,6 +48,9 @@ export default function EditorPage() {
         }
         setEpisode(ep)
         contentRef.current = ep.content
+      }
+      if (novelSnap.exists()) {
+        setNovelTitle(novelSnap.data().title ?? '')
       }
       setSiblings(listSnap.docs.map((d) => ({ id: d.id, order: d.data().order ?? 0 })))
       setFetching(false)
@@ -59,6 +65,13 @@ export default function EditorPage() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [focusMode])
+
+  // 브라우저 탭 제목 업데이트
+  useEffect(() => {
+    if (!episode) return
+    document.title = novelTitle ? `${episode.title} — ${novelTitle}` : episode.title
+    return () => { document.title = '쉬운 소설 작가' }
+  }, [episode, novelTitle])
 
   function handleExport() {
     if (!episode) return

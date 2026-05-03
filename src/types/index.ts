@@ -10,6 +10,7 @@ export interface Novel {
   userId: string
   episodeCount: number
   color?: NovelColor
+  totalChars?: number
 }
 
 export interface Episode {

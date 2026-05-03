@@ -8,6 +8,7 @@ interface Props {
   onRename: (id: string, title: string) => void
   onColorChange: (id: string, color: NovelColor) => void
   onCardClick: (id: string) => void
+  onNewEpisode: (id: string) => void
 }
 
 const COLOR_STYLES: Record<NovelColor, { bar: string; badge: string; dot: string }> = {
@@ -31,7 +32,7 @@ function timeAgo(date: Date): string {
   return date.toLocaleDateString('ko-KR')
 }
 
-export default function NovelCard({ novel, onDelete, onRename, onColorChange, onCardClick }: Props) {
+export default function NovelCard({ novel, onDelete, onRename, onColorChange, onCardClick, onNewEpisode }: Props) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -126,6 +127,24 @@ export default function NovelCard({ novel, onDelete, onRename, onColorChange, on
             <span className="text-xs text-gray-400 dark:text-gray-500">
               {timeAgo(novel.updatedAt)}
             </span>
+            {novel.totalChars != null && novel.totalChars > 0 && (
+              <>
+                <span className="text-gray-200 dark:text-gray-700">·</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  {novel.totalChars.toLocaleString('ko-KR')}자
+                </span>
+              </>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); onNewEpisode(novel.id) }}
+              title="새 회차 작성"
+              className="ml-auto rounded-full p-1 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-indigo-50 hover:text-indigo-500 dark:text-gray-600 dark:hover:bg-indigo-950 dark:hover:text-indigo-400"
+              aria-label="새 회차 추가"
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M8 3v10M3 8h10" />
+              </svg>
+            </button>
           </div>
         </div>
       )}

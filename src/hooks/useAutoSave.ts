@@ -37,6 +37,12 @@ export function useAutoSave(
           )
         }
 
+        // 작품 총 글자수 반영 (증감 모두)
+        if (delta !== 0) {
+          const novelRef = doc(db, 'users', userId, 'novels', novelId)
+          updateDoc(novelRef, { totalChars: increment(delta) }).catch(() => {})
+        }
+
         prevContentRef.current = content
         setStatus('saved')
 

@@ -10,6 +10,7 @@ import {
   query,
   orderBy,
   limit,
+  increment,
   serverTimestamp,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -199,6 +200,27 @@ export default function HomePage() {
     setNovels((prev) => prev.map((n) => (n.id === id ? { ...n, color } : n)))
   }
 
+  async function handleNewEpisode(id: string) {
+    if (!user) return
+    const novel = novels.find((n) => n.id === id)
+    if (!novel) return
+    const order = novel.episodeCount + 1
+    const epRef = await addDoc(collection(db, 'users', user.uid, 'novels', id, 'episodes'), {
+      title: `${order}화`,
+      content: '',
+      order,
+      charCount: 0,
+      excerpt: '',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    await updateDoc(doc(db, 'users', user.uid, 'novels', id), {
+      episodeCount: increment(1),
+      updatedAt: serverTimestamp(),
+    })
+    navigate(`/novels/${id}/episodes/${epRef.id}`)
+  }
+
   async function handleCardClick(id: string) {
     const novel = novels.find((n) => n.id === id)
     if (!user || !novel) return
@@ -372,7 +394,7 @@ export default function HomePage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredNovels.map((n) => (
-              <NovelCard key={n.id} novel={n} onDelete={handleDelete} onRename={handleRename} onColorChange={handleColorChange} onCardClick={handleCardClick} />
+              <NovelCard key={n.id} novel={n} onDelete={handleDelete} onRename={handleRename} onColorChange={handleColorChange} onCardClick={handleCardClick} onNewEpisode={handleNewEpisode} />
             ))}
           </div>
         )}
