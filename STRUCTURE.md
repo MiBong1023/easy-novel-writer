@@ -1,6 +1,6 @@
 # 쉬운 소설 작가 — 구조 문서
 
-> 마지막 업데이트: 2026-05-03 (랜딩 페이지, 집중 모드, 글자 크기, 전체 내보내기, 작품 설명 수정, 통계 바, NovelCard 리디자인, 글쓰기 통계 페이지, 일별 작성량 자동 기록, AI 글쓰기 보조, 작품 검색·정렬, 회차 복사·검색, 목표 달성 피드백, 모바일 반응형, 단축키 도움말, 회차 미리보기, 작품 커버 컬러, 저장 상태 개선, 회차 순서 정리, 통계 작품별 현황)
+> 마지막 업데이트: 2026-05-03 (랜딩 페이지, 집중 모드, 글자 크기, 전체 내보내기, 작품 설명 수정, 통계 바, NovelCard 리디자인, 글쓰기 통계 페이지, 일별 작성량 자동 기록, AI 글쓰기 보조, 작품 검색·정렬, 회차 복사·검색, 목표 달성 피드백, 모바일 반응형, 단축키 도움말, 회차 미리보기, 작품 커버 컬러, 저장 상태 개선, 회차 순서 정리, 통계 작품별 현황, 에디터 온보딩, 작품 cascade 삭제, 다크모드 시스템 감지)
 
 ---
 
@@ -267,7 +267,7 @@ div.overflow-hidden
 | `useAI` | `src/hooks/useAI.ts` | Anthropic API 호출 (`/api/ai`), 이어쓰기/문장 다듬기 |
 | `useAuth` | `src/hooks/useAuth.ts` | Firebase 인증 상태 구독 (user, loading 반환) |
 | `useGoogleLogin` | `src/hooks/useGoogleLogin.ts` | Google 로그인 팝업 처리 |
-| `useDarkMode` | `src/hooks/useDarkMode.ts` | 다크모드 토글, `localStorage` + `html.dark` 클래스 |
+| `useDarkMode` | `src/hooks/useDarkMode.ts` | 다크모드 토글, `localStorage` + `html.dark` 클래스, 시스템 설정 실시간 감지 (`prefers-color-scheme`) |
 
 ---
 

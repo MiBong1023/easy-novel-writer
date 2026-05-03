@@ -165,9 +165,22 @@ export default function HomePage() {
   }
 
   async function handleDelete(id: string) {
-    if (!user || !window.confirm('작품을 삭제할까요?')) return
-    await deleteDoc(doc(db, 'users', user.uid, 'novels', id))
+    if (!user || !window.confirm('작품을 삭제할까요? 모든 회차와 기록이 함께 삭제됩니다.')) return
     setNovels((prev) => prev.filter((n) => n.id !== id))
+    const uid = user.uid
+    const [epSnap, notesSnap] = await Promise.all([
+      getDocs(collection(db, 'users', uid, 'novels', id, 'episodes')),
+      getDocs(collection(db, 'users', uid, 'novels', id, 'notes')),
+    ])
+    await Promise.all([
+      ...epSnap.docs.map(async (ep) => {
+        const versionsSnap = await getDocs(collection(db, 'users', uid, 'novels', id, 'episodes', ep.id, 'versions'))
+        await Promise.all(versionsSnap.docs.map((v) => deleteDoc(v.ref)))
+        return deleteDoc(ep.ref)
+      }),
+      ...notesSnap.docs.map((n) => deleteDoc(n.ref)),
+    ])
+    await deleteDoc(doc(db, 'users', uid, 'novels', id))
   }
 
   if (loading) {

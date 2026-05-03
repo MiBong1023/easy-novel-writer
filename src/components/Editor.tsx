@@ -200,7 +200,15 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           spellCheck={false}
-          placeholder="여기에 소설을 써보세요…"
+          placeholder={[
+            '여기에 소설을 써보세요…',
+            '',
+            '  ✦  Tab → 들여쓰기 2칸',
+            '  ✦  Cmd+F → 찾기 / 바꾸기',
+            '  ✦  ... → …  /  -- → —  자동 변환 (자동변환 ON)',
+            '  ✦  진행바 [집중] → 집중 모드 (Esc로 해제)',
+            '  ✦  진행바 [?] → 단축키 전체 보기',
+          ].join('\n')}
         />
       </div>
       <SpecialCharPanel onInsert={insertAt} />
