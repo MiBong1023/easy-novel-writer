@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import { useAutoConvert } from '@/hooks/useAutoConvert'
 import { useEditor } from '@/hooks/useEditor'
@@ -15,6 +15,7 @@ import FindReplacePanel from './FindReplacePanel'
 import HighlightTextarea from './HighlightTextarea'
 import VersionHistoryPanel from './VersionHistoryPanel'
 import SpellCheckPanel from './SpellCheckPanel'
+import AIPanel from './AIPanel'
 
 interface Props {
   novelId: string
@@ -30,6 +31,8 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
   const [value, setValue] = useState(initialContent)
   const [versionsOpen, setVersionsOpen] = useState(false)
   const [spellCheckOpen, setSpellCheckOpen] = useState(false)
+  const [aiOpen, setAIOpen] = useState(false)
+  const selectedTextRef = useRef('')
   const { autoConvert, toggleAutoConvert } = useAutoConvert()
   const { fontSize, increase, decrease, canIncrease, canDecrease } = useEditorSettings()
   const { ref, handleKeyDown: editorKeyDown, handleChange, insertAt } = useEditor(value, (v) => {
@@ -53,6 +56,24 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
   function handleRestore(content: string) {
     setValue(content)
     onContentChange?.(content)
+  }
+
+  function toggleAI() {
+    setAIOpen((v) => !v)
+    if (ref.current) {
+      const { selectionStart, selectionEnd } = ref.current
+      selectedTextRef.current = value.slice(selectionStart, selectionEnd)
+    }
+  }
+
+  function handleAIInsert(text: string) {
+    const ta = ref.current
+    if (!ta) return
+    const pos = ta.selectionEnd
+    const newValue = value.slice(0, pos) + text + value.slice(pos)
+    setValue(newValue)
+    onContentChange?.(newValue)
+    setAIOpen(false)
   }
 
   function toggleSpellCheck() {
@@ -119,6 +140,8 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
           onFontDecrease={decrease}
           canFontIncrease={canIncrease}
           canFontDecrease={canDecrease}
+          onAI={toggleAI}
+          aiActive={aiOpen}
         />
       )}
       <div className="relative flex-1 overflow-hidden">
@@ -143,6 +166,14 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
             userId={userId}
             onRestore={handleRestore}
             onClose={() => setVersionsOpen(false)}
+          />
+        )}
+        {aiOpen && (
+          <AIPanel
+            value={value}
+            selectedText={selectedTextRef.current}
+            onInsert={handleAIInsert}
+            onClose={() => setAIOpen(false)}
           />
         )}
         {spellCheckOpen && (

@@ -1,6 +1,6 @@
 # 쉬운 소설 작가 — 구조 문서
 
-> 마지막 업데이트: 2026-05-03 (랜딩 페이지, 집중 모드, 글자 크기, 전체 내보내기, 작품 설명 수정, 통계 바, NovelCard 리디자인, 글쓰기 통계 페이지, 일별 작성량 자동 기록)
+> 마지막 업데이트: 2026-05-03 (랜딩 페이지, 집중 모드, 글자 크기, 전체 내보내기, 작품 설명 수정, 통계 바, NovelCard 리디자인, 글쓰기 통계 페이지, 일별 작성량 자동 기록, AI 글쓰기 보조)
 
 ---
 
@@ -234,6 +234,15 @@ div.overflow-hidden
 - 작품 단위 메모 (Firestore `notes` 컬렉션)
 - 메모 추가 / 클릭해서 내용 펼치기 / blur 시 자동 저장 / 삭제
 
+#### AI 글쓰기 보조 패널 — `src/components/AIPanel.tsx`
+- 진행바 `AI` 버튼으로 열기/닫기 (활성 시 인디고 배경)
+- 패널 열릴 때 **이어쓰기** 자동 실행 (최근 600자 → Claude에 전달)
+- **이어쓰기** — 소설 내용을 200자 내외로 이어 작성
+- **문장 다듬기** — 선택 텍스트(없으면 최근 400자)를 문학적으로 교정
+- 결과 → `삽입` (커서 위치에 추가) / `다시` (재생성)
+- `useAI` 훅 → `src/hooks/useAI.ts`
+- 백엔드: `functions/api/ai.ts` (Cloudflare Pages Function, `claude-haiku-4-5-20251001`)
+
 ---
 
 ## 훅 (Hooks)
@@ -249,6 +258,7 @@ div.overflow-hidden
 | `useEditorSettings` | `src/hooks/useEditorSettings.ts` | 에디터 글자 크기 (4단계, `localStorage`) |
 | `useWordCount` | `src/hooks/useWordCount.ts` | 전체/공백제외 글자수, 달성률(%) |
 | `useNotes` | `src/hooks/useNotes.ts` | Firestore 메모 CRUD |
+| `useAI` | `src/hooks/useAI.ts` | Anthropic API 호출 (`/api/ai`), 이어쓰기/문장 다듬기 |
 | `useAuth` | `src/hooks/useAuth.ts` | Firebase 인증 상태 구독 (user, loading 반환) |
 | `useGoogleLogin` | `src/hooks/useGoogleLogin.ts` | Google 로그인 팝업 처리 |
 | `useDarkMode` | `src/hooks/useDarkMode.ts` | 다크모드 토글, `localStorage` + `html.dark` 클래스 |
@@ -256,6 +266,18 @@ div.overflow-hidden
 ---
 
 ## 서버리스 함수
+
+### `functions/api/ai.ts`
+Cloudflare Pages Function. POST `/api/ai` → Anthropic API 프록시.
+
+- `ANTHROPIC_API_KEY` 환경 변수 필요 (Cloudflare Pages 대시보드에서 설정)
+- Body: `{ text: string, type: 'continue' | 'refine' }`
+- `continue` — 소설 이어쓰기 (최근 600자 컨텍스트)
+- `refine` — 문장 다듬기 (선택 텍스트 또는 최근 400자)
+- 모델: `claude-haiku-4-5-20251001` (속도·비용 최적화)
+- 응답: `{ result: string }`
+
+---
 
 ### `functions/api/spellcheck.ts`
 Cloudflare Pages Function. POST `/api/spellcheck` → Daum 맞춤법 API 프록시.

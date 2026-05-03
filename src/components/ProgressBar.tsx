@@ -17,6 +17,8 @@ interface Props {
   onFontDecrease: () => void
   canFontIncrease: boolean
   canFontDecrease: boolean
+  onAI: () => void
+  aiActive: boolean
 }
 
 const STATUS_TEXT: Record<Props['saveStatus'], string> = {
@@ -31,6 +33,7 @@ export default function ProgressBar({
   autoConvert, onToggleAutoConvert, onVersionHistoryOpen,
   onSpellCheck, spellCheckActive, onFocusMode,
   onFontIncrease, onFontDecrease, canFontIncrease, canFontDecrease,
+  onAI, aiActive,
 }: Props) {
   const [editing, setEditing] = useState(false)
   const [input, setInput] = useState(String(goal))
@@ -142,9 +145,20 @@ export default function ProgressBar({
             A+
           </button>
 
-          {/* 집중 모드 구분선 */}
+          {/* AI / 집중 모드 구분선 */}
           <div className="mx-1 h-4 w-px bg-gray-200 dark:bg-gray-700" />
 
+          <button
+            onClick={onAI}
+            title="AI 글쓰기 보조"
+            className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
+              aiActive
+                ? 'border-indigo-300 bg-indigo-50 text-indigo-600 dark:border-indigo-700 dark:bg-indigo-950 dark:text-indigo-400'
+                : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'
+            }`}
+          >
+            AI
+          </button>
           <button
             onClick={onFocusMode}
             title="집중 모드 (Esc로 나가기)"
