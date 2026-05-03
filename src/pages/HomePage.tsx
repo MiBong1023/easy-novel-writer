@@ -16,7 +16,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useGoogleLogin } from '@/hooks/useGoogleLogin'
 import NovelCard from '@/components/NovelCard'
 import DarkModeToggle from '@/components/DarkModeToggle'
-import type { Novel } from '@/types'
+import type { Novel, NovelColor } from '@/types'
 
 // ── 랜딩 페이지 ──────────────────────────────────────────────
 
@@ -156,6 +156,12 @@ export default function HomePage() {
       updatedAt: serverTimestamp(),
     })
     setNovels((prev) => prev.map((n) => (n.id === id ? { ...n, title: newTitle } : n)))
+  }
+
+  async function handleColorChange(id: string, color: NovelColor) {
+    if (!user) return
+    await updateDoc(doc(db, 'users', user.uid, 'novels', id), { color })
+    setNovels((prev) => prev.map((n) => (n.id === id ? { ...n, color } : n)))
   }
 
   async function handleDelete(id: string) {
@@ -300,7 +306,7 @@ export default function HomePage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredNovels.map((n) => (
-              <NovelCard key={n.id} novel={n} onDelete={handleDelete} onRename={handleRename} />
+              <NovelCard key={n.id} novel={n} onDelete={handleDelete} onRename={handleRename} onColorChange={handleColorChange} />
             ))}
           </div>
         )}

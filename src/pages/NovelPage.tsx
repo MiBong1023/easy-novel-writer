@@ -46,7 +46,7 @@ export default function NovelPage() {
     })
     const epRef = collection(db, 'users', user.uid, 'novels', novelId, 'episodes')
     getDocs(query(epRef, orderBy('order', 'asc'))).then((snap) => {
-      setEpisodes(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Episode, 'id'>), createdAt: d.data().createdAt?.toDate() ?? new Date(), updatedAt: d.data().updatedAt?.toDate() ?? new Date() })))
+      setEpisodes(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Episode, 'id'>), excerpt: d.data().excerpt as string | undefined, createdAt: d.data().createdAt?.toDate() ?? new Date(), updatedAt: d.data().updatedAt?.toDate() ?? new Date() })))
     })
   }, [user, novelId])
 
@@ -333,9 +333,16 @@ export default function NovelPage() {
                     to={`/novels/${novelId}/episodes/${ep.id}`}
                     className="flex-1 min-w-0"
                   >
-                    <span className="text-xs text-gray-400 dark:text-gray-500 mr-2">{ep.order}화</span>
-                    <span className="font-medium text-gray-700 dark:text-gray-200">{ep.title}</span>
-                    <span className="ml-2 text-xs text-gray-400">{ep.charCount.toLocaleString()}자</span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-xs text-gray-400 dark:text-gray-500">{ep.order}화</span>
+                      <span className="font-medium text-gray-700 dark:text-gray-200">{ep.title}</span>
+                      <span className="text-xs text-gray-400">{ep.charCount.toLocaleString()}자</span>
+                    </div>
+                    {ep.excerpt && (
+                      <p className="mt-0.5 truncate text-xs text-gray-400 dark:text-gray-600">
+                        {ep.excerpt}
+                      </p>
+                    )}
                   </Link>
                 )}
                 {editingEpId !== ep.id && (

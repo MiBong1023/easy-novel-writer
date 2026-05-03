@@ -7,6 +7,7 @@ import Editor from '@/components/Editor'
 import NotesPanel from '@/components/NotesPanel'
 import AuthButton from '@/components/AuthButton'
 import DarkModeToggle from '@/components/DarkModeToggle'
+import ShortcutsModal from '@/components/ShortcutsModal'
 import type { Episode } from '@/types'
 
 export default function EditorPage() {
@@ -18,6 +19,7 @@ export default function EditorPage() {
   const [fetching, setFetching] = useState(true)
   const [notesOpen, setNotesOpen] = useState(false)
   const [focusMode, setFocusMode] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const contentRef = useRef('')
 
   useEffect(() => {
@@ -127,6 +129,13 @@ export default function EditorPage() {
           >
             ↓ txt
           </button>
+          <button
+            onClick={() => setShortcutsOpen(true)}
+            title="단축키 도움말"
+            className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+          >
+            ?
+          </button>
           <div className="hidden sm:block"><DarkModeToggle /></div>
           <div className="hidden sm:block"><AuthButton user={user} /></div>
         </header>
@@ -149,6 +158,8 @@ export default function EditorPage() {
             onClose={() => setNotesOpen(false)}
           />
         )}
+
+        {shortcutsOpen && <ShortcutsModal onClose={() => setShortcutsOpen(false)} />}
 
         {/* 집중 모드 나가기 버튼 */}
         {focusMode && (

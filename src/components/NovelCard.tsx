@@ -1,11 +1,22 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { Novel } from '@/types'
+import type { Novel, NovelColor } from '@/types'
+import { NOVEL_COLORS } from '@/types'
 
 interface Props {
   novel: Novel
   onDelete: (id: string) => void
   onRename: (id: string, title: string) => void
+  onColorChange: (id: string, color: NovelColor) => void
+}
+
+const COLOR_STYLES: Record<NovelColor, { bar: string; badge: string; dot: string }> = {
+  indigo:  { bar: 'bg-indigo-400',  badge: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400',  dot: 'bg-indigo-400' },
+  rose:    { bar: 'bg-rose-400',    badge: 'bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400',          dot: 'bg-rose-400' },
+  emerald: { bar: 'bg-emerald-400', badge: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400', dot: 'bg-emerald-400' },
+  amber:   { bar: 'bg-amber-400',   badge: 'bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400',      dot: 'bg-amber-400' },
+  violet:  { bar: 'bg-violet-400',  badge: 'bg-violet-50 text-violet-600 dark:bg-violet-950 dark:text-violet-400',  dot: 'bg-violet-400' },
+  sky:     { bar: 'bg-sky-400',     badge: 'bg-sky-50 text-sky-600 dark:bg-sky-950 dark:text-sky-400',              dot: 'bg-sky-400' },
 }
 
 function timeAgo(date: Date): string {
@@ -20,7 +31,7 @@ function timeAgo(date: Date): string {
   return date.toLocaleDateString('ko-KR')
 }
 
-export default function NovelCard({ novel, onDelete, onRename }: Props) {
+export default function NovelCard({ novel, onDelete, onRename, onColorChange }: Props) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -42,12 +53,29 @@ export default function NovelCard({ novel, onDelete, onRename }: Props) {
     if (e.key === 'Escape') setEditing(false)
   }
 
+  const color = novel.color ?? 'indigo'
+  const styles = COLOR_STYLES[color]
+
   return (
-    <div className="group relative flex flex-col rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800">
+    <div className="group relative flex flex-col rounded-xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800 overflow-hidden">
+
+      {/* 컬러 상단 바 */}
+      <div className={`h-1.5 w-full ${styles.bar}`} />
 
       {/* 액션 버튼 */}
       {!editing && (
-        <div className="absolute right-3 top-3 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="absolute right-3 top-4 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+          {/* 컬러 선택 */}
+          <div className="mr-1 flex items-center gap-0.5">
+            {NOVEL_COLORS.map((c) => (
+              <button
+                key={c}
+                onClick={(e) => { e.preventDefault(); onColorChange(novel.id, c) }}
+                className={`h-3.5 w-3.5 rounded-full transition-transform hover:scale-125 ${COLOR_STYLES[c].dot} ${c === color ? 'ring-1 ring-offset-1 ring-gray-400' : ''}`}
+                aria-label={c}
+              />
+            ))}
+          </div>
           <button
             onClick={startEdit}
             className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
@@ -91,7 +119,7 @@ export default function NovelCard({ novel, onDelete, onRename }: Props) {
 
           {/* 하단 메타 */}
           <div className="flex items-center gap-2 border-t border-gray-100 pt-3 dark:border-gray-700/60">
-            <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400">
+            <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${styles.badge}`}>
               {novel.episodeCount}화
             </span>
             <span className="text-gray-200 dark:text-gray-700">·</span>

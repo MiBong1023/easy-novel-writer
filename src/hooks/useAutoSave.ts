@@ -26,7 +26,7 @@ export function useAutoSave(
       try {
         const ref = doc(db, 'users', userId, 'novels', novelId, 'episodes', episodeId)
         const delta = content.length - prevContentRef.current.length
-        await setDoc(ref, { content, updatedAt: serverTimestamp(), charCount: content.length }, { merge: true })
+        await setDoc(ref, { content, updatedAt: serverTimestamp(), charCount: content.length, excerpt: content.slice(0, 80) }, { merge: true })
 
         // 오늘 작성량 기록 (증가분만)
         if (delta > 0) {

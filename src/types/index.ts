@@ -1,3 +1,6 @@
+export const NOVEL_COLORS = ['indigo', 'rose', 'emerald', 'amber', 'violet', 'sky'] as const
+export type NovelColor = typeof NOVEL_COLORS[number]
+
 export interface Novel {
   id: string
   title: string
@@ -6,6 +9,7 @@ export interface Novel {
   updatedAt: Date
   userId: string
   episodeCount: number
+  color?: NovelColor
 }
 
 export interface Episode {
@@ -15,6 +19,7 @@ export interface Episode {
   content: string
   order: number
   charCount: number
+  excerpt?: string
   createdAt: Date
   updatedAt: Date
 }
