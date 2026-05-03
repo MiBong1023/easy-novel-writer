@@ -123,6 +123,26 @@ export default function NovelPage() {
     setNovel((prev) => prev ? { ...prev, description: trimmed } : prev)
   }
 
+  async function handleCopyEpisode(ep: Episode) {
+    if (!user || !novelId) return
+    const snap = await getDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', ep.id))
+    const content = snap.exists() ? (snap.data().content as string) : ''
+    const epRef = collection(db, 'users', user.uid, 'novels', novelId, 'episodes')
+    const newRef = await addDoc(epRef, {
+      novelId,
+      title: `${ep.title} (복사본)`,
+      content,
+      order: episodes.length + 1,
+      charCount: ep.charCount,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    setEpisodes((prev) => [
+      ...prev,
+      { id: newRef.id, novelId: novelId!, title: `${ep.title} (복사본)`, content, order: prev.length + 1, charCount: ep.charCount, createdAt: new Date(), updatedAt: new Date() },
+    ])
+  }
+
   async function handleDeleteEpisode(epId: string) {
     if (!user || !novelId || !window.confirm('회차를 삭제할까요?')) return
     await deleteDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', epId))
@@ -299,13 +319,23 @@ export default function NovelPage() {
                   </Link>
                 )}
                 {editingEpId !== ep.id && (
-                  <button
-                    onClick={() => startEditEp(ep)}
-                    className="rounded p-1 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-300"
-                    aria-label="제목 수정"
-                  >
-                    ✎
-                  </button>
+                  <>
+                    <button
+                      onClick={() => startEditEp(ep)}
+                      className="rounded p-1 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-300"
+                      aria-label="제목 수정"
+                    >
+                      ✎
+                    </button>
+                    <button
+                      onClick={() => handleCopyEpisode(ep)}
+                      className="rounded p-1 text-gray-300 opacity-0 group-hover:opacity-100 hover:text-indigo-500 dark:text-gray-600 dark:hover:text-indigo-400"
+                      aria-label="회차 복사"
+                      title="복사"
+                    >
+                      ⎘
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={() => handleDeleteEpisode(ep.id)}
