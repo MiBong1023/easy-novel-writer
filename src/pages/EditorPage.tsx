@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { doc, getDoc, updateDoc, collection, getDocs, query, orderBy, serverTimestamp } from 'firebase/firestore'
+import { doc, getDoc, updateDoc, collection, getDocs, query, orderBy, serverTimestamp, addDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import Editor from '@/components/Editor'
@@ -28,6 +28,8 @@ export default function EditorPage() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const [shareToast, setShareToast] = useState(false)
   const contentRef = useRef('')
 
   useEffect(() => {
@@ -109,6 +111,37 @@ export default function EditorPage() {
     a.download = `${episode.title}.txt`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  function handleExportMd() {
+    if (!episode) return
+    const md = `# ${episode.title}\n\n${contentRef.current}`
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${episode.title}.md`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function handleShare() {
+    if (!episode || !user) return
+    setSharing(true)
+    try {
+      const ref = await addDoc(collection(db, 'shares'), {
+        novelTitle,
+        episodeTitle: episode.title,
+        content: contentRef.current,
+        createdAt: serverTimestamp(),
+      })
+      const shareUrl = `${window.location.origin}/share/${ref.id}`
+      await navigator.clipboard.writeText(shareUrl).catch(() => {})
+      setShareToast(true)
+      setTimeout(() => setShareToast(false), 3000)
+    } finally {
+      setSharing(false)
+    }
   }
 
   if (loading || fetching) {
@@ -217,6 +250,24 @@ export default function EditorPage() {
             ↓ txt
           </button>
           <button
+            onClick={handleExportMd}
+            title="Markdown으로 내보내기"
+            className="hidden sm:block rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+          >
+            ↓ md
+          </button>
+          <button
+            onClick={handleShare}
+            disabled={sharing}
+            title="공유 링크 복사"
+            className="hidden sm:block rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+          </button>
+          <button
             onClick={() => setShortcutsOpen(true)}
             title="단축키 도움말"
             className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
@@ -248,6 +299,18 @@ export default function EditorPage() {
                   className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   txt 내보내기
+                </button>
+                <button
+                  onClick={() => { handleExportMd(); setHeaderMenuOpen(false) }}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Markdown 내보내기
+                </button>
+                <button
+                  onClick={() => { handleShare(); setHeaderMenuOpen(false) }}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  공유 링크 복사
                 </button>
                 <div className="border-t border-gray-100 dark:border-gray-700" />
                 <button
@@ -287,6 +350,13 @@ export default function EditorPage() {
             content={contentRef.current}
             onClose={() => setPreviewOpen(false)}
           />
+        )}
+
+        {/* 공유 링크 복사 토스트 */}
+        {shareToast && (
+          <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-gray-800 px-4 py-2.5 text-sm text-white shadow-lg dark:bg-gray-700">
+            링크가 클립보드에 복사됐어요 🔗
+          </div>
         )}
 
         {/* 집중 모드 나가기 버튼 */}

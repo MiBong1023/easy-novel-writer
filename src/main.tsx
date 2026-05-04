@@ -7,6 +7,7 @@ import HomePage from './pages/HomePage'
 import NovelPage from './pages/NovelPage'
 import EditorPage from './pages/EditorPage'
 import StatsPage from './pages/StatsPage'
+import SharePage from './pages/SharePage'
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -23,6 +24,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/novels/:novelId" element={<NovelPage />} />
           <Route path="/novels/:novelId/episodes/:episodeId" element={<EditorPage />} />
           <Route path="/stats" element={<StatsPage />} />
+          <Route path="/share/:shareId" element={<SharePage />} />
         </Routes>
       </BrowserRouter>
     </ErrorBoundary>

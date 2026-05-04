@@ -488,6 +488,22 @@ export default function NovelPage() {
                         {ep.excerpt}
                       </p>
                     )}
+                    {(() => {
+                      const goal = parseInt(localStorage.getItem(`goal-${ep.id}`) ?? '0', 10)
+                      if (!goal) return null
+                      const pct = Math.min(Math.round((ep.charCount / goal) * 100), 100)
+                      return (
+                        <div className="mt-1.5 flex items-center gap-1.5">
+                          <div className="h-1 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
+                            <div
+                              className={`h-full rounded-full transition-all ${pct >= 100 ? 'bg-emerald-400' : 'bg-indigo-300 dark:bg-indigo-600'}`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <span className="shrink-0 text-[10px] text-gray-400 dark:text-gray-600">{pct}%</span>
+                        </div>
+                      )
+                    })()}
                   </div>
                 )}
                 {!selectMode && editingEpId !== ep.id && (
