@@ -380,9 +380,40 @@ export default function HomePage() {
         )}
 
         {novels.length === 0 ? (
-          <div className="mt-20 text-center text-gray-400 dark:text-gray-600">
-            <p className="mb-4 text-4xl">📖</p>
-            <p>아직 작품이 없어요. 새 작품을 만들어보세요!</p>
+          <div className="flex flex-col items-center pt-10">
+            <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="mb-7 text-center">
+                <p className="mb-3 text-5xl">✍️</p>
+                <h2 className="mb-1 text-xl font-bold text-gray-800 dark:text-gray-100">첫 작품을 시작해보세요</h2>
+                <p className="text-sm text-gray-400 dark:text-gray-500">제목만 입력하면 바로 에디터로 이동합니다</p>
+              </div>
+              <form onSubmit={handleCreate} className="space-y-3">
+                <input
+                  autoFocus
+                  required
+                  placeholder="작품 제목"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500"
+                />
+                <textarea
+                  placeholder="간단한 설명 (선택)"
+                  value={desc}
+                  onChange={(e) => setDesc(e.target.value)}
+                  rows={2}
+                  className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500"
+                />
+                {error && (
+                  <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-400">{error}</p>
+                )}
+                <button
+                  type="submit"
+                  className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-[0.98]"
+                >
+                  만들고 시작하기
+                </button>
+              </form>
+            </div>
           </div>
         ) : filteredNovels.length === 0 ? (
           <div className="mt-16 text-center text-gray-400 dark:text-gray-600">

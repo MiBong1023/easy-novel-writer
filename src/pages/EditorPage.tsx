@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { doc, getDoc, collection, getDocs, query, orderBy } from 'firebase/firestore'
+import { doc, getDoc, updateDoc, collection, getDocs, query, orderBy, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import Editor from '@/components/Editor'
@@ -16,6 +16,8 @@ export default function EditorPage() {
   const navigate = useNavigate()
   const [episode, setEpisode] = useState<Episode | null>(null)
   const [novelTitle, setNovelTitle] = useState('')
+  const [titleEditing, setTitleEditing] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
   const [siblings, setSiblings] = useState<{ id: string; order: number }[]>([])
   const [fetching, setFetching] = useState(true)
   const [notesOpen, setNotesOpen] = useState(false)
@@ -73,6 +75,18 @@ export default function EditorPage() {
     return () => { document.title = '쉬운 소설 작가' }
   }, [episode, novelTitle])
 
+  async function commitTitle() {
+    setTitleEditing(false)
+    const trimmed = titleDraft.trim()
+    if (!trimmed || !episode || trimmed === episode.title || !user || !novelId || !episodeId) return
+    await updateDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', episodeId), {
+      title: trimmed,
+      updatedAt: serverTimestamp(),
+    })
+    setEpisode((prev) => prev ? { ...prev, title: trimmed } : prev)
+    document.title = novelTitle ? `${trimmed} — ${novelTitle}` : trimmed
+  }
+
   function handleExport() {
     if (!episode) return
     const blob = new Blob([contentRef.current], { type: 'text/plain;charset=utf-8' })
@@ -126,9 +140,27 @@ export default function EditorPage() {
           >
             ← <span className="hidden sm:inline">목록</span>
           </Link>
-          <span className="flex-1 truncate text-sm font-medium text-gray-700 dark:text-gray-300">
-            {episode.title}
-          </span>
+          {titleEditing ? (
+            <input
+              autoFocus
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onBlur={commitTitle}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); commitTitle() }
+                if (e.key === 'Escape') setTitleEditing(false)
+              }}
+              className="flex-1 rounded border border-indigo-400 bg-transparent px-1.5 py-0.5 text-sm font-medium text-gray-700 focus:outline-none dark:text-gray-200"
+            />
+          ) : (
+            <span
+              onClick={() => { setTitleDraft(episode.title); setTitleEditing(true) }}
+              title="클릭하여 제목 수정"
+              className="flex-1 cursor-text truncate text-sm font-medium text-gray-700 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400"
+            >
+              {episode.title}
+            </span>
+          )}
           {prevEp && (
             <button
               onClick={() => navigate(`/novels/${novelId}/episodes/${prevEp.id}`)}

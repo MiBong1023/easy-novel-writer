@@ -134,29 +134,58 @@ export default function StatsPage() {
         {/* 최근 14일 바 차트 */}
         <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
           <h2 className="mb-4 text-sm font-semibold text-gray-600 dark:text-gray-300">최근 14일</h2>
-          <div className="flex items-end justify-between gap-1" style={{ height: 120 }}>
-            {chartData.map(({ date, value }) => {
-              const isToday = date === today
-              const heightPct = Math.max((value / maxVal) * 100, value > 0 ? 4 : 0)
-              return (
-                <div key={date} className="group relative flex flex-1 flex-col items-center justify-end gap-1">
-                  {value > 0 && (
-                    <div className="pointer-events-none absolute bottom-full mb-1 hidden rounded bg-gray-800 px-1.5 py-0.5 text-xs text-white group-hover:block dark:bg-gray-600">
-                      {value.toLocaleString()}자
-                    </div>
-                  )}
-                  <div
-                    className={`w-full rounded-t transition-all ${
-                      isToday ? 'bg-indigo-500' : value > 0 ? 'bg-indigo-300 dark:bg-indigo-700' : 'bg-gray-100 dark:bg-gray-700'
-                    }`}
-                    style={{ height: `${heightPct}%` }}
-                  />
-                  <span className={`text-[10px] ${isToday ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                    {formatDate(date)}
-                  </span>
-                </div>
-              )
-            })}
+          <div className="relative" style={{ height: 148 }}>
+            {/* 그리드 라인 */}
+            {[50, 100].map((pct) => (
+              <div
+                key={pct}
+                className="absolute w-full border-t border-dashed border-gray-100 dark:border-gray-700"
+                style={{ bottom: `calc(${pct}% * 108 / 148 + 28px)` }}
+              />
+            ))}
+            <div className="absolute bottom-7 flex w-full items-end justify-between gap-1" style={{ height: 108 }}>
+              {chartData.map(({ date, value }) => {
+                const isToday = date === today
+                const heightPct = Math.max((value / maxVal) * 100, value > 0 ? 3 : 0)
+                return (
+                  <div key={date} className="group relative flex flex-1 flex-col items-center justify-end">
+                    {/* 호버 툴팁 */}
+                    {value > 0 && (
+                      <div className="pointer-events-none absolute bottom-full mb-1.5 hidden whitespace-nowrap rounded-md bg-gray-800 px-2 py-1 text-xs text-white shadow group-hover:block dark:bg-gray-600">
+                        {value.toLocaleString()}자
+                      </div>
+                    )}
+                    {/* 오늘 마커 */}
+                    {isToday && (
+                      <span className="absolute -top-5 text-[9px] font-bold text-indigo-500 dark:text-indigo-400">▼</span>
+                    )}
+                    <div
+                      className={`w-full rounded-t transition-all duration-300 ${
+                        isToday
+                          ? 'bg-indigo-500 dark:bg-indigo-400'
+                          : value > 0
+                          ? 'bg-indigo-300 hover:bg-indigo-400 dark:bg-indigo-700 dark:hover:bg-indigo-600'
+                          : 'bg-gray-100 dark:bg-gray-700'
+                      }`}
+                      style={{ height: `${heightPct}%` }}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+            {/* 날짜 레이블 행 */}
+            <div className="absolute bottom-0 flex w-full justify-between gap-1">
+              {chartData.map(({ date }) => {
+                const isToday = date === today
+                return (
+                  <div key={date} className="flex flex-1 justify-center">
+                    <span className={`text-[10px] leading-none ${isToday ? 'font-bold text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                      {isToday ? '오늘' : formatDate(date)}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
 
