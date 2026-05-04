@@ -10,6 +10,7 @@ interface Props {
   onCardClick: (id: string) => void
   onNewEpisode: (id: string) => void
   onTagToggle: (id: string, genre: NovelGenre) => void
+  onDescriptionChange?: (id: string, description: string) => void
 }
 
 const COLOR_STYLES: Record<NovelColor, { bar: string; badge: string; dot: string }> = {
@@ -33,10 +34,17 @@ function timeAgo(date: Date): string {
   return date.toLocaleDateString('ko-KR')
 }
 
-export default function NovelCard({ novel, onDelete, onRename, onColorChange, onCardClick, onNewEpisode, onTagToggle }: Props) {
+export default function NovelCard({ novel, onDelete, onRename, onColorChange, onCardClick, onNewEpisode, onTagToggle, onDescriptionChange }: Props) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
+  const [descEditing, setDescEditing] = useState(false)
+  const [descDraft, setDescDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
+
+  function commitDesc() {
+    setDescEditing(false)
+    if (onDescriptionChange) onDescriptionChange(novel.id, descDraft.trim())
+  }
 
   function startEdit() {
     setDraft(novel.title)
@@ -115,9 +123,33 @@ export default function NovelCard({ novel, onDelete, onRename, onColorChange, on
           </h2>
 
           {/* 설명 */}
-          <p className={`line-clamp-2 text-sm leading-relaxed ${novel.description ? 'text-gray-500 dark:text-gray-400' : 'italic text-gray-300 dark:text-gray-600'}`}>
-            {novel.description || '설명 없음'}
-          </p>
+          {descEditing ? (
+            <textarea
+              autoFocus
+              value={descDraft}
+              onChange={(e) => setDescDraft(e.target.value)}
+              onBlur={commitDesc}
+              onKeyDown={(e) => { if (e.key === 'Escape') { setDescEditing(false) } if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) commitDesc() }}
+              onClick={(e) => e.stopPropagation()}
+              rows={2}
+              className="w-full resize-none rounded-lg border border-indigo-300 bg-gray-50 px-2 py-1 text-xs focus:outline-none dark:border-indigo-600 dark:bg-gray-800 dark:text-gray-200"
+            />
+          ) : (
+            <div className="group/desc flex items-start gap-1">
+              <p className={`flex-1 line-clamp-2 text-sm leading-relaxed ${novel.description ? 'text-gray-500 dark:text-gray-400' : 'italic text-gray-300 dark:text-gray-600'}`}>
+                {novel.description || '설명 없음'}
+              </p>
+              {onDescriptionChange && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setDescDraft(novel.description ?? ''); setDescEditing(true) }}
+                  className="mt-0.5 shrink-0 rounded p-0.5 text-gray-300 opacity-0 transition-opacity group-hover/desc:opacity-100 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-300"
+                  title="설명 수정"
+                >
+                  ✎
+                </button>
+              )}
+            </div>
+          )}
 
           {/* 태그 — 기본: 선택된 태그만, hover: 전체 장르 토글 */}
           <div className="mt-2 min-h-[22px]">

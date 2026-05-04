@@ -150,9 +150,27 @@ export default function HomePage() {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'updated' | 'title' | 'episodes'>('updated')
   const [filterTag, setFilterTag] = useState<NovelGenre | null>(null)
+  const [streak, setStreak] = useState(0)
   const navigate = useNavigate()
 
   const novelsRef = user ? collection(db, 'users', user.uid, 'novels') : null
+
+  useEffect(() => {
+    if (!user) return
+    getDocs(collection(db, 'users', user.uid, 'stats')).then((snap) => {
+      const map = new Map(snap.docs.map((d) => [d.data().date as string, d.data().charsAdded as number]))
+      let s = 0
+      const d = new Date()
+      const todayKey = d.toISOString().slice(0, 10)
+      if (!map.get(todayKey)) d.setDate(d.getDate() - 1)
+      while (true) {
+        const key = d.toISOString().slice(0, 10)
+        if ((map.get(key) ?? 0) > 0) { s++; d.setDate(d.getDate() - 1) }
+        else break
+      }
+      setStreak(s)
+    })
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!novelsRef) return
@@ -194,6 +212,15 @@ export default function HomePage() {
       updatedAt: serverTimestamp(),
     })
     setNovels((prev) => prev.map((n) => (n.id === id ? { ...n, title: newTitle } : n)))
+  }
+
+  async function handleDescriptionChange(id: string, description: string) {
+    if (!user) return
+    await updateDoc(doc(db, 'users', user.uid, 'novels', id), {
+      description,
+      updatedAt: serverTimestamp(),
+    })
+    setNovels((prev) => prev.map((n) => (n.id === id ? { ...n, description } : n)))
   }
 
   async function handleTagToggle(id: string, genre: NovelGenre) {
@@ -310,7 +337,14 @@ export default function HomePage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <header className="border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-800 dark:bg-gray-900">
         <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">쉬운 소설 작가</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">쉬운 소설 작가</h1>
+            {streak > 0 && (
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-600 dark:bg-amber-950/60 dark:text-amber-400" title="연속 글쓰기 일수">
+                🔥 {streak}일
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <DarkModeToggle />
             <Link
@@ -476,7 +510,7 @@ export default function HomePage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredNovels.map((n) => (
-              <NovelCard key={n.id} novel={n} onDelete={handleDelete} onRename={handleRename} onColorChange={handleColorChange} onCardClick={handleCardClick} onNewEpisode={handleNewEpisode} onTagToggle={handleTagToggle} />
+              <NovelCard key={n.id} novel={n} onDelete={handleDelete} onRename={handleRename} onColorChange={handleColorChange} onCardClick={handleCardClick} onNewEpisode={handleNewEpisode} onTagToggle={handleTagToggle} onDescriptionChange={handleDescriptionChange} />
             ))}
           </div>
         )}

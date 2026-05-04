@@ -10,6 +10,7 @@ export interface Note {
   title: string
   body: string
   updatedAt: Date
+  pinned?: boolean
 }
 
 export function useNotes(novelId: string, userId: string) {
@@ -24,6 +25,7 @@ export function useNotes(novelId: string, userId: string) {
         title: d.data().title as string,
         body: d.data().body as string,
         updatedAt: d.data().updatedAt?.toDate() ?? new Date(),
+        pinned: (d.data().pinned as boolean) ?? false,
       })))
       setLoading(false)
     })
@@ -54,5 +56,23 @@ export function useNotes(novelId: string, userId: string) {
     setNotes((prev) => prev.filter((n) => n.id !== id))
   }, [novelId, userId])
 
-  return { notes, loading, addNote, updateNote, deleteNote }
+  const togglePin = useCallback(async (id: string) => {
+    setNotes((prev) => {
+      const note = prev.find((n) => n.id === id)
+      if (!note) return prev
+      const pinned = !note.pinned
+      updateDoc(doc(db, 'users', userId, 'novels', novelId, 'notes', id), { pinned }).catch(() => {})
+      return prev
+        .map((n) => (n.id === id ? { ...n, pinned } : n))
+        .sort((a, b) => {
+          const pa = a.id === id ? pinned : !!a.pinned
+          const pb = b.id === id ? pinned : !!b.pinned
+          if (pa && !pb) return -1
+          if (!pa && pb) return 1
+          return b.updatedAt.getTime() - a.updatedAt.getTime()
+        })
+    })
+  }, [novelId, userId])
+
+  return { notes, loading, addNote, updateNote, deleteNote, togglePin }
 }
