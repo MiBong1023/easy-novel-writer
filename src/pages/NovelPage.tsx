@@ -361,7 +361,7 @@ export default function NovelPage() {
           />
         )}
 
-        {creating && (
+        {creating && episodes.length > 0 && (
           <form onSubmit={handleCreateEpisode} className="mb-4 flex gap-2">
             <input
               autoFocus
@@ -388,9 +388,30 @@ export default function NovelPage() {
         )}
 
         {episodes.length === 0 ? (
-          <div className="mt-16 text-center text-gray-400 dark:text-gray-600">
-            <p className="text-3xl mb-3">✍️</p>
-            <p>아직 회차가 없어요. 첫 회차를 만들어보세요!</p>
+          <div className="flex flex-col items-center pt-8">
+            <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="mb-6 text-center">
+                <p className="mb-3 text-4xl">✍️</p>
+                <h2 className="mb-1 text-lg font-bold text-gray-800 dark:text-gray-100">첫 회차를 시작해보세요</h2>
+                <p className="text-sm text-gray-400 dark:text-gray-500">제목을 입력하고 바로 쓰기 시작하세요</p>
+              </div>
+              <form onSubmit={handleCreateEpisode} className="space-y-3">
+                <input
+                  autoFocus
+                  required
+                  placeholder="예: 1화, 프롤로그…"
+                  value={epTitle}
+                  onChange={(e) => setEpTitle(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500"
+                />
+                <button
+                  type="submit"
+                  className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-[0.98]"
+                >
+                  만들고 시작하기
+                </button>
+              </form>
+            </div>
           </div>
         ) : (() => {
           const visible = epSearch.trim()

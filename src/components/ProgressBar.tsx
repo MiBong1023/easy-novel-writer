@@ -22,6 +22,15 @@ interface Props {
 }
 
 
+function getSavedLabel(lastSavedAt: Date | null): string | null {
+  if (!lastSavedAt) return null
+  const diff = Math.floor((Date.now() - lastSavedAt.getTime()) / 1000)
+  if (diff < 60) return '방금 저장'
+  const mins = Math.floor(diff / 60)
+  if (mins < 60) return `${mins}분 전 저장`
+  return null
+}
+
 export default function ProgressBar({
   count, countNoSpace, goal, percent, saveStatus, onGoalChange,
   autoConvert, onToggleAutoConvert, onVersionHistoryOpen,
@@ -31,15 +40,17 @@ export default function ProgressBar({
 }: Props) {
   const [editing, setEditing] = useState(false)
   const [input, setInput] = useState(String(goal))
-  const [savedVisible, setSavedVisible] = useState(false)
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
+  const [, setTick] = useState(0)
 
   useEffect(() => {
-    if (saveStatus === 'saved') {
-      setSavedVisible(true)
-      const t = setTimeout(() => setSavedVisible(false), 2000)
-      return () => clearTimeout(t)
-    }
+    if (saveStatus === 'saved') setLastSavedAt(new Date())
   }, [saveStatus])
+
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 15_000)
+    return () => clearInterval(id)
+  }, [])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -99,13 +110,12 @@ export default function ProgressBar({
               <span className="text-red-500">저장 실패</span>
             </>
           )}
-          <span
-            className={`ml-1 text-emerald-500 transition-opacity duration-700 dark:text-emerald-400 ${
-              savedVisible ? 'opacity-100' : 'opacity-0'
-            }`}
-          >
-            ✓
-          </span>
+          {saveStatus !== 'saving' && getSavedLabel(lastSavedAt) && (
+            <>
+              <span className="text-gray-200 dark:text-gray-700">·</span>
+              <span className="text-emerald-500 dark:text-emerald-400">{getSavedLabel(lastSavedAt)}</span>
+            </>
+          )}
         </span>
 
         {/* 오른쪽: 액션 버튼 그룹 */}
