@@ -288,6 +288,7 @@ export default function NovelPage() {
         {episodes.length > 0 && (() => {
           const totalChars = episodes.reduce((s, ep) => s + (ep.charCount || 0), 0)
           const avgChars = Math.round(totalChars / episodes.length)
+          const pages = Math.round(totalChars / 400)
           return (
             <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg bg-gray-50 px-4 py-2.5 text-sm text-gray-500 dark:bg-gray-900 dark:text-gray-400">
               <span className="font-medium text-gray-700 dark:text-gray-200">{episodes.length}회차</span>
@@ -295,6 +296,12 @@ export default function NovelPage() {
               <span>총 <span className="font-medium text-gray-700 dark:text-gray-200">{totalChars.toLocaleString()}</span>자</span>
               <span className="text-gray-300 dark:text-gray-700">·</span>
               <span>평균 <span className="font-medium text-gray-700 dark:text-gray-200">{avgChars.toLocaleString()}</span>자/회</span>
+              {pages > 0 && (
+                <>
+                  <span className="text-gray-300 dark:text-gray-700">·</span>
+                  <span>약 <span className="font-medium text-gray-700 dark:text-gray-200">{pages}</span>페이지</span>
+                </>
+              )}
             </div>
           )
         })()}

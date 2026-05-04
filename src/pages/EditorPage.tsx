@@ -75,6 +75,14 @@ export default function EditorPage() {
     return () => { document.title = '쉬운 소설 작가' }
   }, [episode, novelTitle])
 
+  // 마지막 작성 회차 정보를 novel 문서에 기록
+  useEffect(() => {
+    if (!episode || !user || !novelId) return
+    updateDoc(doc(db, 'users', user.uid, 'novels', novelId), {
+      lastEpisodeTitle: episode.title,
+    }).catch(() => {})
+  }, [episode?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   async function commitTitle() {
     setTitleEditing(false)
     const trimmed = titleDraft.trim()

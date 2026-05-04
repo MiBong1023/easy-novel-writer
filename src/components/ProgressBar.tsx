@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface Props {
   count: number
@@ -42,6 +42,8 @@ export default function ProgressBar({
   const [input, setInput] = useState(String(goal))
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [, setTick] = useState(0)
+  const [justReached, setJustReached] = useState(false)
+  const prevPercentRef = useRef(0)
 
   useEffect(() => {
     if (saveStatus === 'saved') setLastSavedAt(new Date())
@@ -51,6 +53,15 @@ export default function ProgressBar({
     const id = setInterval(() => setTick((t) => t + 1), 15_000)
     return () => clearInterval(id)
   }, [])
+
+  useEffect(() => {
+    if (percent >= 100 && prevPercentRef.current < 100) {
+      setJustReached(true)
+      const t = setTimeout(() => setJustReached(false), 3000)
+      return () => clearTimeout(t)
+    }
+    prevPercentRef.current = percent
+  }, [percent])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -194,16 +205,16 @@ export default function ProgressBar({
       </div>
 
       {/* 프로그레스 바 */}
-      <div className="h-1 w-full rounded-full bg-gray-100 dark:bg-gray-800">
+      <div className={`h-1 w-full rounded-full bg-gray-100 transition-all dark:bg-gray-800 ${justReached ? 'ring-2 ring-emerald-300 ring-offset-1 dark:ring-emerald-700' : ''}`}>
         <div
           className={`h-1 rounded-full transition-all duration-500 ${
             percent >= 100 ? 'bg-emerald-500' : 'bg-indigo-500'
-          }`}
+          } ${justReached ? 'animate-pulse' : ''}`}
           style={{ width: `${Math.min(percent, 100)}%` }}
         />
       </div>
       {percent >= 100 && (
-        <p className="mt-1 text-center text-[10px] font-medium text-emerald-500 dark:text-emerald-400">
+        <p className={`mt-1 text-center text-[10px] font-medium text-emerald-500 dark:text-emerald-400 ${justReached ? 'animate-bounce' : ''}`}>
           🎉 목표 달성!
         </p>
       )}

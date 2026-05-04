@@ -11,6 +11,7 @@ export interface Novel {
   episodeCount: number
   color?: NovelColor
   totalChars?: number
+  lastEpisodeTitle?: string
 }
 
 export interface Episode {

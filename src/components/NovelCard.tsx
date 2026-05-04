@@ -114,8 +114,13 @@ export default function NovelCard({ novel, onDelete, onRename, onColorChange, on
           </h2>
 
           {/* 설명 */}
-          <p className={`mb-4 flex-1 line-clamp-2 text-sm leading-relaxed ${novel.description ? 'text-gray-500 dark:text-gray-400' : 'italic text-gray-300 dark:text-gray-600'}`}>
+          <p className={`line-clamp-2 text-sm leading-relaxed ${novel.description ? 'text-gray-500 dark:text-gray-400' : 'italic text-gray-300 dark:text-gray-600'}`}>
             {novel.description || '설명 없음'}
+          </p>
+
+          {/* 마지막 작성 회차 (hover 시 노출) */}
+          <p className={`mt-1 mb-3 truncate text-xs text-indigo-400 opacity-0 transition-opacity group-hover:opacity-100 dark:text-indigo-500 ${novel.lastEpisodeTitle ? '' : 'invisible'}`}>
+            마지막: {novel.lastEpisodeTitle ?? ''}
           </p>
 
           {/* 하단 메타 */}
