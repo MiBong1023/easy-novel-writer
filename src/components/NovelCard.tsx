@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
-import type { Novel, NovelColor } from '@/types'
-import { NOVEL_COLORS } from '@/types'
+import type { Novel, NovelColor, NovelGenre } from '@/types'
+import { NOVEL_COLORS, NOVEL_GENRES } from '@/types'
 
 interface Props {
   novel: Novel
@@ -9,6 +9,7 @@ interface Props {
   onColorChange: (id: string, color: NovelColor) => void
   onCardClick: (id: string) => void
   onNewEpisode: (id: string) => void
+  onTagToggle: (id: string, genre: NovelGenre) => void
 }
 
 const COLOR_STYLES: Record<NovelColor, { bar: string; badge: string; dot: string }> = {
@@ -32,7 +33,7 @@ function timeAgo(date: Date): string {
   return date.toLocaleDateString('ko-KR')
 }
 
-export default function NovelCard({ novel, onDelete, onRename, onColorChange, onCardClick, onNewEpisode }: Props) {
+export default function NovelCard({ novel, onDelete, onRename, onColorChange, onCardClick, onNewEpisode, onTagToggle }: Props) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -117,6 +118,38 @@ export default function NovelCard({ novel, onDelete, onRename, onColorChange, on
           <p className={`line-clamp-2 text-sm leading-relaxed ${novel.description ? 'text-gray-500 dark:text-gray-400' : 'italic text-gray-300 dark:text-gray-600'}`}>
             {novel.description || '설명 없음'}
           </p>
+
+          {/* 태그 — 기본: 선택된 태그만, hover: 전체 장르 토글 */}
+          <div className="mt-2 min-h-[22px]">
+            {/* 기본 상태: 선택된 태그 (hover 시 숨김) */}
+            <div className="flex flex-wrap gap-1 group-hover:hidden">
+              {(novel.tags ?? []).slice(0, 3).map((g) => {
+                const genre = NOVEL_GENRES.find((x) => x.id === g)
+                return genre ? (
+                  <span key={g} className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${styles.badge}`}>
+                    {genre.label}
+                  </span>
+                ) : null
+              })}
+            </div>
+            {/* hover 상태: 전체 장르 토글 */}
+            <div className="hidden flex-wrap gap-1 group-hover:flex">
+              {NOVEL_GENRES.map(({ id, label }) => {
+                const active = (novel.tags ?? []).includes(id)
+                return (
+                  <button
+                    key={id}
+                    onClick={(e) => { e.stopPropagation(); onTagToggle(novel.id, id) }}
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                      active ? styles.badge : 'bg-gray-100 text-gray-400 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-500 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
 
           {/* 마지막 작성 회차 (hover 시 노출) */}
           <p className={`mt-1 mb-3 truncate text-xs text-indigo-400 opacity-0 transition-opacity group-hover:opacity-100 dark:text-indigo-500 ${novel.lastEpisodeTitle ? '' : 'invisible'}`}>

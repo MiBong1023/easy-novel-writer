@@ -18,7 +18,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useGoogleLogin } from '@/hooks/useGoogleLogin'
 import NovelCard from '@/components/NovelCard'
 import DarkModeToggle from '@/components/DarkModeToggle'
-import type { Novel, NovelColor } from '@/types'
+import type { Novel, NovelColor, NovelGenre } from '@/types'
+import { NOVEL_GENRES } from '@/types'
 
 // ── 랜딩 페이지 ──────────────────────────────────────────────
 
@@ -148,6 +149,7 @@ export default function HomePage() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<'updated' | 'title' | 'episodes'>('updated')
+  const [filterTag, setFilterTag] = useState<NovelGenre | null>(null)
   const navigate = useNavigate()
 
   const novelsRef = user ? collection(db, 'users', user.uid, 'novels') : null
@@ -192,6 +194,18 @@ export default function HomePage() {
       updatedAt: serverTimestamp(),
     })
     setNovels((prev) => prev.map((n) => (n.id === id ? { ...n, title: newTitle } : n)))
+  }
+
+  async function handleTagToggle(id: string, genre: NovelGenre) {
+    if (!user) return
+    const novel = novels.find((n) => n.id === id)
+    if (!novel) return
+    const current = novel.tags ?? []
+    const tags: NovelGenre[] = current.includes(genre)
+      ? current.filter((g) => g !== genre)
+      : [...current, genre]
+    await updateDoc(doc(db, 'users', user.uid, 'novels', id), { tags })
+    setNovels((prev) => prev.map((n) => (n.id === id ? { ...n, tags } : n)))
   }
 
   async function handleColorChange(id: string, color: NovelColor) {
@@ -266,14 +280,26 @@ export default function HomePage() {
     return <LandingPage />
   }
 
-  const filteredNovels = (
-    search.trim()
-      ? novels.filter((n) =>
-          n.title.toLowerCase().includes(search.toLowerCase()) ||
-          n.description?.toLowerCase().includes(search.toLowerCase()),
+  const allTags = [...new Set(novels.flatMap((n) => n.tags ?? []))]
+
+  const filteredNovels = novels
+    .filter((n) => {
+      if (filterTag && !(n.tags ?? []).includes(filterTag)) return false
+      if (search.trim()) {
+        const q = search.toLowerCase()
+        return (
+          n.title.toLowerCase().includes(q) ||
+          n.description?.toLowerCase().includes(q) ||
+          n.lastEpisodeTitle?.toLowerCase().includes(q) ||
+          (n.tags ?? []).some((g) => {
+            const genre = NOVEL_GENRES.find((x) => x.id === g)
+            return genre?.label.toLowerCase().includes(q)
+          })
         )
-      : [...novels]
-  ).sort((a, b) => {
+      }
+      return true
+    })
+    .sort((a, b) => {
     if (sortBy === 'title') return a.title.localeCompare(b.title, 'ko')
     if (sortBy === 'episodes') return b.episodeCount - a.episodeCount
     return b.updatedAt.getTime() - a.updatedAt.getTime()
@@ -308,7 +334,8 @@ export default function HomePage() {
       <main className="mx-auto max-w-4xl p-6">
         {/* 검색 + 정렬 */}
         {!creating && novels.length > 0 && (
-          <div className="mb-6 flex gap-2">
+          <div className="mb-6 space-y-3">
+          <div className="flex gap-2">
             <input
               type="search"
               placeholder="작품 검색…"
@@ -332,6 +359,30 @@ export default function HomePage() {
                 </button>
               ))}
             </div>
+          </div>
+          {/* 장르 필터 칩 */}
+          {allTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {allTags.map((g) => {
+                const genre = NOVEL_GENRES.find((x) => x.id === g)
+                if (!genre) return null
+                const active = filterTag === g
+                return (
+                  <button
+                    key={g}
+                    onClick={() => setFilterTag(active ? null : g)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                      active
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-white border border-gray-200 text-gray-500 hover:border-indigo-300 hover:text-indigo-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:border-indigo-700 dark:hover:text-indigo-400'
+                    }`}
+                  >
+                    {genre.label}
+                  </button>
+                )
+              })}
+            </div>
+          )}
           </div>
         )}
 
@@ -425,7 +476,7 @@ export default function HomePage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredNovels.map((n) => (
-              <NovelCard key={n.id} novel={n} onDelete={handleDelete} onRename={handleRename} onColorChange={handleColorChange} onCardClick={handleCardClick} onNewEpisode={handleNewEpisode} />
+              <NovelCard key={n.id} novel={n} onDelete={handleDelete} onRename={handleRename} onColorChange={handleColorChange} onCardClick={handleCardClick} onNewEpisode={handleNewEpisode} onTagToggle={handleTagToggle} />
             ))}
           </div>
         )}

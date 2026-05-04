@@ -226,12 +226,93 @@ export default function StatsPage() {
           </div>
         )}
 
+        {/* 연간 잔디 뷰 */}
+        <YearGrid stats={stats} />
+
         {stats.length === 0 && (
           <p className="text-center text-sm text-gray-400 dark:text-gray-600">
             아직 기록이 없어요. 글을 쓰면 통계가 쌓입니다.
           </p>
         )}
       </main>
+    </div>
+  )
+}
+
+function YearGrid({ stats }: { stats: DayStat[] }) {
+  const map = new Map(stats.map((s) => [s.date, s.charsAdded]))
+  const today = new Date().toISOString().slice(0, 10)
+  const year = new Date().getFullYear()
+
+  // 올해 1월 1일부터 오늘까지 날짜 배열
+  const dates: string[] = []
+  const d = new Date(year, 0, 1)
+  const end = new Date()
+  while (d <= end) {
+    dates.push(d.toISOString().slice(0, 10))
+    d.setDate(d.getDate() + 1)
+  }
+
+  // 1월 1일의 요일만큼 앞에 빈칸 채우기 (0=일)
+  const startDay = new Date(year, 0, 1).getDay()
+  const padded: (string | null)[] = [...Array(startDay).fill(null), ...dates]
+
+  // 7개씩 주(week) 단위로 분할
+  const weeks: (string | null)[][] = []
+  for (let i = 0; i < padded.length; i += 7) weeks.push(padded.slice(i, i + 7))
+
+  function cellColor(date: string | null) {
+    if (!date) return ''
+    const v = map.get(date) ?? 0
+    if (v === 0) return 'bg-gray-100 dark:bg-gray-800'
+    if (v < 500)  return 'bg-emerald-100 dark:bg-emerald-900/60'
+    if (v < 1500) return 'bg-emerald-300 dark:bg-emerald-700'
+    if (v < 3000) return 'bg-emerald-500'
+    return 'bg-emerald-700 dark:bg-emerald-400'
+  }
+
+  const months = ['1','2','3','4','5','6','7','8','9','10','11','12']
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+      <h2 className="mb-4 text-sm font-semibold text-gray-600 dark:text-gray-300">{year}년 글쓰기 기록</h2>
+      <div className="overflow-x-auto">
+        <div className="flex gap-px" style={{ minWidth: `${weeks.length * 13}px` }}>
+          {weeks.map((week, wi) => (
+            <div key={wi} className="flex flex-col gap-px">
+              {week.map((date, di) => (
+                <div
+                  key={di}
+                  title={date ? `${date.slice(5).replace('-','/')} · ${(map.get(date) ?? 0).toLocaleString()}자` : ''}
+                  className={`h-3 w-3 rounded-sm transition-colors ${date ? cellColor(date) : ''} ${date === today ? 'ring-1 ring-indigo-400 ring-offset-[1px]' : ''}`}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+        {/* 월 레이블 */}
+        <div className="mt-1.5 flex text-[9px] text-gray-400 dark:text-gray-600" style={{ minWidth: `${weeks.length * 13}px` }}>
+          {weeks.map((week, wi) => {
+            const firstDate = week.find(Boolean)
+            if (!firstDate) return <div key={wi} style={{ width: 13 }} />
+            const day = parseInt(firstDate.slice(8), 10)
+            const month = parseInt(firstDate.slice(5, 7), 10)
+            return (
+              <div key={wi} style={{ width: 13 }} className="shrink-0">
+                {day <= 7 ? months[month - 1] : ''}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+      {/* 범례 */}
+      <div className="mt-3 flex items-center gap-1.5 text-[10px] text-gray-400 dark:text-gray-500">
+        <span>적게</span>
+        {['bg-gray-100 dark:bg-gray-800','bg-emerald-100','bg-emerald-300','bg-emerald-500','bg-emerald-700'].map((c, i) => (
+          <div key={i} className={`h-3 w-3 rounded-sm ${c}`} />
+        ))}
+        <span>많이</span>
+      </div>
     </div>
   )
 }

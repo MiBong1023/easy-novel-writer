@@ -8,6 +8,7 @@ import NotesPanel from '@/components/NotesPanel'
 import AuthButton from '@/components/AuthButton'
 import DarkModeToggle from '@/components/DarkModeToggle'
 import ShortcutsModal from '@/components/ShortcutsModal'
+import PreviewModal from '@/components/PreviewModal'
 import type { Episode } from '@/types'
 
 export default function EditorPage() {
@@ -23,6 +24,7 @@ export default function EditorPage() {
   const [notesOpen, setNotesOpen] = useState(false)
   const [focusMode, setFocusMode] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
   const contentRef = useRef('')
 
   useEffect(() => {
@@ -195,6 +197,16 @@ export default function EditorPage() {
             🗒️
           </button>
           <button
+            onClick={() => setPreviewOpen(true)}
+            title="미리보기"
+            className="hidden sm:block rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+          <button
             onClick={handleExport}
             title="txt로 내보내기"
             className="hidden sm:block rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
@@ -232,6 +244,13 @@ export default function EditorPage() {
         )}
 
         {shortcutsOpen && <ShortcutsModal onClose={() => setShortcutsOpen(false)} />}
+        {previewOpen && (
+          <PreviewModal
+            title={episode.title}
+            content={contentRef.current}
+            onClose={() => setPreviewOpen(false)}
+          />
+        )}
 
         {/* 집중 모드 나가기 버튼 */}
         {focusMode && (
