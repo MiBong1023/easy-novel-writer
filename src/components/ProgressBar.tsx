@@ -43,6 +43,7 @@ export default function ProgressBar({
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
   const [, setTick] = useState(0)
   const [justReached, setJustReached] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const prevPercentRef = useRef(0)
 
   useEffect(() => {
@@ -77,7 +78,7 @@ export default function ProgressBar({
   }
 
   return (
-    <div className="flex flex-col gap-1.5 border-b border-gray-200 px-4 py-2.5 dark:border-gray-700">
+    <div className="relative flex flex-col gap-1.5 border-b border-gray-200 px-4 py-2.5 dark:border-gray-700">
       <div className="flex items-center justify-between gap-3">
 
         {/* 왼쪽: 글자수 통계 + 저장 상태 */}
@@ -201,8 +202,53 @@ export default function ProgressBar({
           >
             집중
           </button>
+
+          {/* 모바일 전용 ⋯ 메뉴 */}
+          <button
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            className="sm:hidden rounded-md border border-gray-200 px-2.5 py-1 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+          >
+            ⋯
+          </button>
         </div>
       </div>
+
+      {/* 모바일 오버플로우 드롭다운 */}
+      {mobileMenuOpen && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setMobileMenuOpen(false)} />
+          <div className="absolute right-3 top-10 z-20 min-w-[170px] rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+            <button
+              onClick={() => { onVersionHistoryOpen(); setMobileMenuOpen(false) }}
+              className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              버전 기록
+            </button>
+            <button
+              onClick={() => { onToggleAutoConvert(); setMobileMenuOpen(false) }}
+              className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              자동변환
+              {autoConvert && <span className="text-xs text-indigo-500">ON</span>}
+            </button>
+            <div className="flex items-center justify-between px-4 py-2.5">
+              <span className="text-sm text-gray-600 dark:text-gray-300">글자 크기</span>
+              <div className="flex items-center gap-1">
+                <button onClick={onFontDecrease} disabled={!canFontDecrease} className="rounded px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-100 disabled:opacity-30 dark:text-gray-400 dark:hover:bg-gray-700">A-</button>
+                <button onClick={onFontIncrease} disabled={!canFontIncrease} className="rounded px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-100 disabled:opacity-30 dark:text-gray-400 dark:hover:bg-gray-700">A+</button>
+              </div>
+            </div>
+            <div className="border-t border-gray-100 dark:border-gray-700" />
+            <button
+              onClick={() => { onAI(); setMobileMenuOpen(false) }}
+              className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${aiActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300'}`}
+            >
+              AI 글쓰기 보조
+              {aiActive && <span className="text-xs text-indigo-500">ON</span>}
+            </button>
+          </div>
+        </>
+      )}
 
       {/* 프로그레스 바 */}
       <div className={`h-1 w-full rounded-full bg-gray-100 transition-all dark:bg-gray-800 ${justReached ? 'ring-2 ring-emerald-300 ring-offset-1 dark:ring-emerald-700' : ''}`}>

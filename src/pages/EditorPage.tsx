@@ -7,6 +7,7 @@ import Editor from '@/components/Editor'
 import NotesPanel from '@/components/NotesPanel'
 import AuthButton from '@/components/AuthButton'
 import DarkModeToggle from '@/components/DarkModeToggle'
+import { useDarkMode } from '@/hooks/useDarkMode'
 import ShortcutsModal from '@/components/ShortcutsModal'
 import PreviewModal from '@/components/PreviewModal'
 import type { Episode } from '@/types'
@@ -14,6 +15,7 @@ import type { Episode } from '@/types'
 export default function EditorPage() {
   const { novelId, episodeId } = useParams<{ novelId: string; episodeId: string }>()
   const { user, loading } = useAuth()
+  const { dark, toggle: toggleDark } = useDarkMode()
   const navigate = useNavigate()
   const [episode, setEpisode] = useState<Episode | null>(null)
   const [novelTitle, setNovelTitle] = useState('')
@@ -25,6 +27,7 @@ export default function EditorPage() {
   const [focusMode, setFocusMode] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false)
   const contentRef = useRef('')
 
   useEffect(() => {
@@ -143,7 +146,7 @@ export default function EditorPage() {
     <div className="flex h-screen flex-col bg-white dark:bg-gray-950">
       {/* 헤더: 집중 모드일 때 숨김 */}
       {!focusMode && (
-        <header className="flex shrink-0 items-center gap-1 border-b border-gray-200 px-3 py-3 dark:border-gray-800 sm:gap-2 sm:px-4">
+        <header className="relative flex shrink-0 items-center gap-1 border-b border-gray-200 px-3 py-3 dark:border-gray-800 sm:gap-2 sm:px-4">
           <Link
             to={`/novels/${novelId}`}
             className="shrink-0 text-sm text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
@@ -222,6 +225,40 @@ export default function EditorPage() {
           </button>
           <div className="hidden sm:block"><DarkModeToggle /></div>
           <div className="hidden sm:block"><AuthButton user={user} /></div>
+
+          {/* 모바일 전용 ⋯ 메뉴 */}
+          <button
+            onClick={() => setHeaderMenuOpen((v) => !v)}
+            className="sm:hidden rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+          >
+            ⋯
+          </button>
+          {headerMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setHeaderMenuOpen(false)} />
+              <div className="absolute right-3 top-12 z-20 min-w-[160px] rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                <button
+                  onClick={() => { setPreviewOpen(true); setHeaderMenuOpen(false) }}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 rounded-t-xl"
+                >
+                  미리보기
+                </button>
+                <button
+                  onClick={() => { handleExport(); setHeaderMenuOpen(false) }}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  txt 내보내기
+                </button>
+                <div className="border-t border-gray-100 dark:border-gray-700" />
+                <button
+                  onClick={() => { toggleDark(); setHeaderMenuOpen(false) }}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700 rounded-b-xl"
+                >
+                  {dark ? '라이트 모드' : '다크 모드'}
+                </button>
+              </div>
+            </>
+          )}
         </header>
       )}
 
