@@ -50,12 +50,28 @@ const COLOR_BAR: Record<string, string> = {
   amber: 'bg-amber-400', violet: 'bg-violet-400', sky: 'bg-sky-400',
 }
 
+const DAILY_GOAL_KEY = 'daily-writing-goal'
+
 export default function StatsPage() {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
   const [stats, setStats] = useState<DayStat[]>([])
   const [novelStats, setNovelStats] = useState<NovelStat[]>([])
   const [fetching, setFetching] = useState(true)
+  const [dailyGoal, setDailyGoalState] = useState<number>(() =>
+    parseInt(localStorage.getItem(DAILY_GOAL_KEY) ?? '1000', 10)
+  )
+  const [goalEditing, setGoalEditing] = useState(false)
+  const [goalInput, setGoalInput] = useState('')
+
+  function commitGoal() {
+    const v = parseInt(goalInput, 10)
+    if (!isNaN(v) && v > 0) {
+      localStorage.setItem(DAILY_GOAL_KEY, String(v))
+      setDailyGoalState(v)
+    }
+    setGoalEditing(false)
+  }
 
   useEffect(() => {
     if (!loading && !user) { navigate('/'); return }
@@ -125,7 +141,49 @@ export default function StatsPage() {
 
         {/* 주요 지표 카드 */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard label="오늘" value={todayChars.toLocaleString()} unit="자" highlight />
+          {/* 오늘 카드 — 일일 목표 포함 */}
+          <div className={`rounded-xl border p-4 border-indigo-200 bg-indigo-50 dark:border-indigo-800 dark:bg-indigo-950/50`}>
+            <div className="mb-1 flex items-center justify-between gap-1">
+              <p className="text-xs text-gray-400 dark:text-gray-500">오늘</p>
+              <div className="flex items-center gap-1 text-[10px] text-gray-400">
+                <span>목표</span>
+                {goalEditing ? (
+                  <form onSubmit={(e) => { e.preventDefault(); commitGoal() }} className="inline">
+                    <input
+                      autoFocus
+                      type="number"
+                      value={goalInput}
+                      onChange={(e) => setGoalInput(e.target.value)}
+                      onBlur={commitGoal}
+                      className="w-14 rounded border border-indigo-300 bg-white px-1 text-[10px] text-gray-700 focus:outline-none dark:border-indigo-600 dark:bg-gray-800 dark:text-gray-200"
+                    />
+                  </form>
+                ) : (
+                  <button
+                    onClick={() => { setGoalInput(String(dailyGoal)); setGoalEditing(true) }}
+                    className="underline decoration-dotted hover:text-indigo-500"
+                    title="일일 목표 변경"
+                  >
+                    {dailyGoal.toLocaleString()}자
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+              {todayChars.toLocaleString()}
+              <span className="ml-1 text-sm font-normal text-gray-400">자</span>
+            </p>
+            {/* 목표 달성 진행바 */}
+            <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-indigo-100 dark:bg-indigo-900/50">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${todayChars >= dailyGoal ? 'bg-emerald-400' : 'bg-indigo-400'}`}
+                style={{ width: `${Math.min((todayChars / dailyGoal) * 100, 100)}%` }}
+              />
+            </div>
+            <p className="mt-1 text-[10px] text-indigo-400 dark:text-indigo-500">
+              {todayChars >= dailyGoal ? '🎉 목표 달성!' : `${Math.round((todayChars / dailyGoal) * 100)}%`}
+            </p>
+          </div>
           <StatCard label="이번 주" value={weekChars.toLocaleString()} unit="자" />
           <StatCard label="누적" value={totalChars.toLocaleString()} unit="자" />
           <StatCard label="연속 작성" value={String(streak)} unit="일" />
@@ -143,6 +201,15 @@ export default function StatsPage() {
                 style={{ bottom: `calc(${pct}% * 108 / 148 + 28px)` }}
               />
             ))}
+            {/* 일일 목표 라인 */}
+            {dailyGoal > 0 && dailyGoal <= maxVal && (
+              <div
+                className="absolute w-full border-t-2 border-dashed border-amber-300/70 dark:border-amber-600/50"
+                style={{ bottom: `calc(${(dailyGoal / maxVal) * 100}% * 108 / 148 + 28px)` }}
+              >
+                <span className="absolute right-0 -top-3.5 text-[9px] text-amber-400 dark:text-amber-600">목표</span>
+              </div>
+            )}
             <div className="absolute bottom-7 flex w-full items-end justify-between gap-1" style={{ height: 108 }}>
               {chartData.map(({ date, value }) => {
                 const isToday = date === today

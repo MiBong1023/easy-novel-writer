@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTimer } from '@/hooks/useTimer'
 
 interface Props {
   count: number
@@ -44,7 +45,9 @@ export default function ProgressBar({
   const [, setTick] = useState(0)
   const [justReached, setJustReached] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [timerMenuOpen, setTimerMenuOpen] = useState(false)
   const prevPercentRef = useRef(0)
+  const { running: timerRunning, done: timerDone, start: startTimer, stop: stopTimer, mins, secs } = useTimer()
 
   useEffect(() => {
     if (saveStatus === 'saved') setLastSavedAt(new Date())
@@ -184,6 +187,53 @@ export default function ProgressBar({
           {/* AI / 집중 모드 구분선 */}
           <div className="hidden sm:block mx-1 h-4 w-px bg-gray-200 dark:bg-gray-700" />
 
+          {/* 집중 타이머 */}
+          <div className="relative hidden sm:block">
+            {timerRunning ? (
+              <div className="flex items-center gap-1">
+                <span className={`tabular-nums text-xs font-medium ${mins === 0 && secs <= 30 ? 'animate-pulse text-red-500' : 'text-indigo-500 dark:text-indigo-400'}`}>
+                  {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
+                </span>
+                <button
+                  onClick={stopTimer}
+                  title="타이머 정지"
+                  className="rounded-md border border-gray-200 px-1.5 py-1 text-xs text-gray-400 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                >
+                  ■
+                </button>
+              </div>
+            ) : timerDone ? (
+              <span className="text-xs font-medium text-emerald-500 dark:text-emerald-400">✓ 완료!</span>
+            ) : (
+              <>
+                <button
+                  onClick={() => setTimerMenuOpen((v) => !v)}
+                  title="집중 타이머"
+                  className="rounded-md border border-gray-200 px-2.5 py-1 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                >
+                  ⏱
+                </button>
+                {timerMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setTimerMenuOpen(false)} />
+                    <div className="absolute bottom-full right-0 z-20 mb-1 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                      {[15, 25, 50].map((m) => (
+                        <button
+                          key={m}
+                          onClick={() => { startTimer(m); setTimerMenuOpen(false) }}
+                          className="flex w-full items-center justify-between gap-4 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                        >
+                          <span>{m}분</span>
+                          <span className="text-xs text-gray-400">{m === 25 ? '포모도로' : ''}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+
           <button
             onClick={onAI}
             title="AI 글쓰기 보조"
@@ -238,6 +288,31 @@ export default function ProgressBar({
                 <button onClick={onFontIncrease} disabled={!canFontIncrease} className="rounded px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-100 disabled:opacity-30 dark:text-gray-400 dark:hover:bg-gray-700">A+</button>
               </div>
             </div>
+            <div className="border-t border-gray-100 dark:border-gray-700" />
+            {timerRunning ? (
+              <button
+                onClick={() => { stopTimer(); setMobileMenuOpen(false) }}
+                className="flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm text-red-500 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                <span>타이머 정지</span>
+                <span className="tabular-nums text-xs font-medium">{String(mins).padStart(2,'0')}:{String(secs).padStart(2,'0')}</span>
+              </button>
+            ) : (
+              <div>
+                <p className="px-4 pt-2.5 pb-1 text-xs text-gray-400 dark:text-gray-500">집중 타이머</p>
+                <div className="flex gap-1 px-4 pb-2.5">
+                  {[15, 25, 50].map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => { startTimer(m); setMobileMenuOpen(false) }}
+                      className="flex-1 rounded-lg border border-gray-200 py-1.5 text-xs text-gray-600 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-600 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-indigo-950"
+                    >
+                      {m}분
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="border-t border-gray-100 dark:border-gray-700" />
             <button
               onClick={() => { onAI(); setMobileMenuOpen(false) }}

@@ -30,6 +30,7 @@ export default function EditorPage() {
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false)
   const [sharing, setSharing] = useState(false)
   const [shareToast, setShareToast] = useState(false)
+  const [shareMenuOpen, setShareMenuOpen] = useState(false)
   const contentRef = useRef('')
 
   useEffect(() => {
@@ -125,16 +126,23 @@ export default function EditorPage() {
     URL.revokeObjectURL(url)
   }
 
-  async function handleShare() {
+  async function handleShare(expiryDays: number | null) {
     if (!episode || !user) return
     setSharing(true)
+    setShareMenuOpen(false)
     try {
-      const ref = await addDoc(collection(db, 'shares'), {
+      const data: Record<string, unknown> = {
         novelTitle,
         episodeTitle: episode.title,
         content: contentRef.current,
         createdAt: serverTimestamp(),
-      })
+      }
+      if (expiryDays !== null) {
+        const expiresAt = new Date()
+        expiresAt.setDate(expiresAt.getDate() + expiryDays)
+        data.expiresAt = expiresAt
+      }
+      const ref = await addDoc(collection(db, 'shares'), data)
       const shareUrl = `${window.location.origin}/share/${ref.id}`
       await navigator.clipboard.writeText(shareUrl).catch(() => {})
       setShareToast(true)
@@ -256,17 +264,37 @@ export default function EditorPage() {
           >
             ↓ md
           </button>
-          <button
-            onClick={handleShare}
-            disabled={sharing}
-            title="공유 링크 복사"
-            className="hidden sm:block rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-            </svg>
-          </button>
+          {/* 공유 링크 — 만료 옵션 팝오버 */}
+          <div className="relative hidden sm:block">
+            <button
+              onClick={() => setShareMenuOpen((v) => !v)}
+              disabled={sharing}
+              title="공유 링크 복사"
+              className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+            </button>
+            {shareMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShareMenuOpen(false)} />
+                <div className="absolute right-0 top-full z-20 mt-1 w-36 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                  <p className="px-3 py-2 text-[10px] text-gray-400 dark:text-gray-500">링크 유효 기간</p>
+                  {[{ label: '24시간', days: 1 }, { label: '7일', days: 7 }, { label: '영구', days: null }].map(({ label, days }) => (
+                    <button
+                      key={label}
+                      onClick={() => handleShare(days)}
+                      className="flex w-full items-center px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           <button
             onClick={() => setShortcutsOpen(true)}
             title="단축키 도움말"
@@ -307,10 +335,10 @@ export default function EditorPage() {
                   Markdown 내보내기
                 </button>
                 <button
-                  onClick={() => { handleShare(); setHeaderMenuOpen(false) }}
+                  onClick={() => { handleShare(7); setHeaderMenuOpen(false) }}
                   className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
-                  공유 링크 복사
+                  공유 링크 복사 (7일)
                 </button>
                 <div className="border-t border-gray-100 dark:border-gray-700" />
                 <button

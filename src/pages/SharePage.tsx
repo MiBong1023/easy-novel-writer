@@ -15,25 +15,37 @@ export default function SharePage() {
   const [data, setData] = useState<ShareData | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [expired, setExpired] = useState(false)
 
   useEffect(() => {
     if (!shareId) return
     getDoc(doc(db, 'shares', shareId)).then((snap) => {
-      if (!snap.exists()) {
-        setNotFound(true)
-      } else {
-        setData({
-          novelTitle: snap.data().novelTitle as string,
-          episodeTitle: snap.data().episodeTitle as string,
-          content: snap.data().content as string,
-        })
+      if (!snap.exists()) { setNotFound(true); setLoading(false); return }
+      const d = snap.data()
+      if (d.expiresAt) {
+        const expiresAt: Date = d.expiresAt.toDate()
+        if (expiresAt < new Date()) { setExpired(true); setLoading(false); return }
       }
+      setData({
+        novelTitle: d.novelTitle as string,
+        episodeTitle: d.episodeTitle as string,
+        content: d.content as string,
+      })
       setLoading(false)
     })
   }, [shareId])
 
   if (loading) {
     return <div className="flex h-screen items-center justify-center text-gray-400">로딩 중…</div>
+  }
+  if (expired) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-3 text-gray-400">
+        <p className="text-4xl">⏰</p>
+        <p className="text-sm">공유 링크가 만료됐어요.</p>
+        <Link to="/" className="text-xs text-indigo-500 hover:underline">홈으로 →</Link>
+      </div>
+    )
   }
   if (notFound || !data) {
     return (
