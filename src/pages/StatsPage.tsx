@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { collection, getDocs } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -63,6 +63,8 @@ export default function StatsPage() {
   )
   const [goalEditing, setGoalEditing] = useState(false)
   const [goalInput, setGoalInput] = useState('')
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission | null>(null)
+  const goalNotifiedRef = useRef(false)
 
   function commitGoal() {
     const v = parseInt(goalInput, 10)
@@ -71,6 +73,29 @@ export default function StatsPage() {
       setDailyGoalState(v)
     }
     setGoalEditing(false)
+  }
+
+  useEffect(() => {
+    if ('Notification' in window) setNotifPermission(Notification.permission)
+  }, [])
+
+  useEffect(() => {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+    const todayKey = new Date().toISOString().slice(0, 10)
+    const todayCharsVal = stats.find((s) => s.date === todayKey)?.charsAdded ?? 0
+    if (todayCharsVal < dailyGoal || todayCharsVal === 0) return
+    const notifKey = `goal-notif-${todayKey}`
+    if (sessionStorage.getItem(notifKey) || goalNotifiedRef.current) return
+    goalNotifiedRef.current = true
+    new Notification('오늘의 목표 달성! 🎉', {
+      body: `오늘 ${todayCharsVal.toLocaleString()}자를 썼어요. 목표 ${dailyGoal.toLocaleString()}자 달성!`,
+    })
+    sessionStorage.setItem(notifKey, '1')
+  }, [stats, dailyGoal])
+
+  async function requestNotifPermission() {
+    const result = await Notification.requestPermission()
+    setNotifPermission(result)
   }
 
   useEffect(() => {
@@ -114,6 +139,15 @@ export default function StatsPage() {
   weekStart.setDate(weekStart.getDate() - 6)
   const weekKey = weekStart.toISOString().slice(0, 10)
   const weekChars = stats.filter((s) => s.date >= weekKey).reduce((sum, s) => sum + s.charsAdded, 0)
+
+  const lastWeekEndDate = new Date(); lastWeekEndDate.setDate(lastWeekEndDate.getDate() - 7)
+  const lastWeekStartDate = new Date(); lastWeekStartDate.setDate(lastWeekStartDate.getDate() - 13)
+  const lastWeekEndKey = lastWeekEndDate.toISOString().slice(0, 10)
+  const lastWeekStartKey = lastWeekStartDate.toISOString().slice(0, 10)
+  const lastWeekChars = stats.filter((s) => s.date >= lastWeekStartKey && s.date <= lastWeekEndKey).reduce((sum, s) => sum + s.charsAdded, 0)
+  const weekDiff = weekChars - lastWeekChars
+  const weekDiffPct = lastWeekChars > 0 ? Math.round(Math.abs(weekDiff / lastWeekChars) * 100) : null
+  const maxWeek = Math.max(weekChars, lastWeekChars, 1)
 
   const totalChars = stats.reduce((sum, s) => sum + s.charsAdded, 0)
   const streak = getStreak(stats)
@@ -183,11 +217,61 @@ export default function StatsPage() {
             <p className="mt-1 text-[10px] text-indigo-400 dark:text-indigo-500">
               {todayChars >= dailyGoal ? '🎉 목표 달성!' : `${Math.round((todayChars / dailyGoal) * 100)}%`}
             </p>
+            {notifPermission === 'default' && (
+              <button
+                onClick={requestNotifPermission}
+                className="mt-2 w-full rounded-lg bg-indigo-100 px-2 py-1 text-[10px] text-indigo-600 hover:bg-indigo-200 dark:bg-indigo-900/50 dark:text-indigo-400 dark:hover:bg-indigo-900"
+              >
+                🔔 목표 알림 켜기
+              </button>
+            )}
+            {notifPermission === 'denied' && (
+              <p className="mt-1 text-[9px] text-gray-400 dark:text-gray-600">알림 차단됨</p>
+            )}
           </div>
           <StatCard label="이번 주" value={weekChars.toLocaleString()} unit="자" />
           <StatCard label="누적" value={totalChars.toLocaleString()} unit="자" />
           <StatCard label="연속 작성" value={String(streak)} unit="일" />
         </div>
+
+        {/* 주간 비교 */}
+        {(weekChars > 0 || lastWeekChars > 0) && (
+          <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+            <h2 className="mb-4 text-sm font-semibold text-gray-600 dark:text-gray-300">주간 비교</h2>
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-3">
+                <span className="w-14 shrink-0 text-right text-xs text-gray-400 dark:text-gray-500">지난 주</span>
+                <div className="flex-1 h-2.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
+                  <div
+                    className="h-full rounded-full bg-gray-300 dark:bg-gray-600 transition-all duration-500"
+                    style={{ width: `${(lastWeekChars / maxWeek) * 100}%` }}
+                  />
+                </div>
+                <span className="w-16 shrink-0 text-right text-xs text-gray-500 dark:text-gray-400">{lastWeekChars.toLocaleString()}자</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="w-14 shrink-0 text-right text-xs font-medium text-indigo-600 dark:text-indigo-400">이번 주</span>
+                <div className="flex-1 h-2.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700">
+                  <div
+                    className="h-full rounded-full bg-indigo-400 dark:bg-indigo-500 transition-all duration-500"
+                    style={{ width: `${(weekChars / maxWeek) * 100}%` }}
+                  />
+                </div>
+                <span className="w-16 shrink-0 text-right text-xs font-medium text-indigo-600 dark:text-indigo-400">{weekChars.toLocaleString()}자</span>
+              </div>
+            </div>
+            {weekDiffPct !== null && (
+              <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
+                <span className={`font-semibold ${weekDiff >= 0 ? 'text-emerald-500' : 'text-red-400'}`}>
+                  {weekDiff >= 0 ? '▲' : '▼'} {weekDiffPct}%
+                </span>{' '}
+                지난 주 대비 {weekDiff >= 0
+                  ? `${Math.abs(weekDiff).toLocaleString()}자 더 썼어요`
+                  : `${Math.abs(weekDiff).toLocaleString()}자 덜 썼어요`}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* 최근 14일 바 차트 */}
         <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">

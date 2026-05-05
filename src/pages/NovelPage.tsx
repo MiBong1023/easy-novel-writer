@@ -31,6 +31,9 @@ export default function NovelPage() {
   const [descEditing, setDescEditing] = useState(false)
   const [descDraft, setDescDraft] = useState('')
   const [epSearch, setEpSearch] = useState('')
+  const [deepSearch, setDeepSearch] = useState(false)
+  const [deepContents, setDeepContents] = useState<Record<string, string>>({})
+  const [deepLoading, setDeepLoading] = useState(false)
   const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null)
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -148,6 +151,21 @@ export default function NovelPage() {
     )
   }
 
+  async function loadDeepSearch() {
+    if (!user || !novelId || deepLoading) return
+    setDeepLoading(true)
+    const contents: Record<string, string> = {}
+    await Promise.all(
+      episodes.map(async (ep) => {
+        const snap = await getDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', ep.id))
+        if (snap.exists()) contents[ep.id] = (snap.data().content as string) ?? ''
+      })
+    )
+    setDeepContents(contents)
+    setDeepSearch(true)
+    setDeepLoading(false)
+  }
+
   async function handleCopyEpisode(ep: Episode) {
     if (!user || !novelId) return
     const snap = await getDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', ep.id))
@@ -241,6 +259,29 @@ export default function NovelPage() {
 
   if (loading || !novel) {
     return <div className="flex h-screen items-center justify-center text-gray-400">로딩 중…</div>
+  }
+
+  const q = epSearch.trim().toLowerCase()
+  const visible = q
+    ? episodes.filter((ep) => {
+        if (ep.title.toLowerCase().includes(q)) return true
+        if (ep.excerpt?.toLowerCase().includes(q)) return true
+        if (deepSearch && deepContents[ep.id]?.toLowerCase().includes(q)) return true
+        return false
+      })
+    : episodes
+
+  const getDeepSnippet = (ep: Episode): string | null => {
+    if (!deepSearch || !q) return null
+    if (ep.title.toLowerCase().includes(q)) return null
+    if (ep.excerpt?.toLowerCase().includes(q)) return null
+    const content = deepContents[ep.id]
+    if (!content) return null
+    const idx = content.toLowerCase().indexOf(q)
+    if (idx === -1) return null
+    const start = Math.max(0, idx - 30)
+    const end = Math.min(content.length, idx + q.length + 60)
+    return (start > 0 ? '…' : '') + content.slice(start, end) + (end < content.length ? '…' : '')
   }
 
   return (
@@ -375,13 +416,27 @@ export default function NovelPage() {
         </div>
 
         {episodes.length >= 5 && (
-          <input
-            type="search"
-            placeholder="회차 검색…"
-            value={epSearch}
-            onChange={(e) => setEpSearch(e.target.value)}
-            className="mb-4 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-600"
-          />
+          <div className="mb-4 flex gap-2">
+            <input
+              type="search"
+              placeholder="회차 제목 / 내용 검색…"
+              value={epSearch}
+              onChange={(e) => setEpSearch(e.target.value)}
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-600"
+            />
+            <button
+              onClick={deepSearch ? () => { setDeepSearch(false); setDeepContents({}) } : loadDeepSearch}
+              disabled={deepLoading}
+              title={deepSearch ? '전체 내용 검색 해제' : '전체 내용까지 검색 (Firestore 조회)'}
+              className={`shrink-0 rounded-lg border px-3 py-2 text-xs transition-colors disabled:opacity-50 ${
+                deepSearch
+                  ? 'border-indigo-300 bg-indigo-50 text-indigo-600 dark:border-indigo-700 dark:bg-indigo-950 dark:text-indigo-400'
+                  : 'border-gray-200 bg-white text-gray-500 hover:border-indigo-300 hover:text-indigo-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400'
+              }`}
+            >
+              {deepLoading ? '로딩…' : deepSearch ? '전체 ON' : '전체'}
+            </button>
+          </div>
         )}
 
         {creating && episodes.length > 0 && (
@@ -436,16 +491,11 @@ export default function NovelPage() {
               </form>
             </div>
           </div>
-        ) : (() => {
-          const visible = epSearch.trim()
-            ? episodes.filter((ep) => ep.title.toLowerCase().includes(epSearch.toLowerCase()))
-            : episodes
-          if (visible.length === 0) return (
-            <p className="mt-8 text-center text-sm text-gray-400 dark:text-gray-600">
-              "{epSearch}"에 해당하는 회차가 없어요.
-            </p>
-          )
-          return (
+        ) : visible.length === 0 ? (
+          <p className="mt-8 text-center text-sm text-gray-400 dark:text-gray-600">
+            "{epSearch}"에 해당하는 회차가 없어요.
+          </p>
+        ) : (
           <ul className="space-y-2">
             {visible.map((ep, index) => (
               <li
@@ -477,14 +527,14 @@ export default function NovelPage() {
                   />
                 ) : (
                   <>
-                    {/* 데스크탑: 드래그 핸들 */}
-                    <span
+                    {/* 데스크탑: 드래그 핸들 (검색 중 숨김) */}
+                    {!q && <span
                       onClick={(e) => e.stopPropagation()}
                       className="hidden sm:inline cursor-grab text-gray-200 select-none dark:text-gray-700"
                       aria-hidden="true"
-                    >⠿</span>
-                    {/* 모바일: ↑↓ 순서 버튼 */}
-                    <div className="flex sm:hidden flex-col" onClick={(e) => e.stopPropagation()}>
+                    >⠿</span>}
+                    {/* 모바일: ↑↓ 순서 버튼 (검색 중 숨김) */}
+                    {!q && <div className="flex sm:hidden flex-col" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => handleMoveEpisode(ep.id, -1)}
                         disabled={index === 0}
@@ -495,7 +545,7 @@ export default function NovelPage() {
                         disabled={index === visible.length - 1}
                         className="rounded px-1 py-0.5 text-[10px] text-gray-300 hover:text-indigo-500 disabled:opacity-20 dark:text-gray-700"
                       >▼</button>
-                    </div>
+                    </div>}
                   </>
                 )}
                 {editingEpId === ep.id ? (
@@ -520,6 +570,14 @@ export default function NovelPage() {
                         {ep.excerpt}
                       </p>
                     )}
+                    {(() => {
+                      const snippet = getDeepSnippet(ep)
+                      return snippet ? (
+                        <p className="mt-0.5 line-clamp-1 text-xs text-amber-600/80 dark:text-amber-500">
+                          {snippet}
+                        </p>
+                      ) : null
+                    })()}
                     {(() => {
                       const goal = parseInt(localStorage.getItem(`goal-${ep.id}`) ?? '0', 10)
                       if (!goal) return null
@@ -569,8 +627,7 @@ export default function NovelPage() {
               </li>
             ))}
           </ul>
-          )
-        })()}
+        )}
       </main>
     </div>
   )
