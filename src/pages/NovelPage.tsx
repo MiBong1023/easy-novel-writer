@@ -17,7 +17,18 @@ import { useAuth } from '@/hooks/useAuth'
 import AuthButton from '@/components/AuthButton'
 import DarkModeToggle from '@/components/DarkModeToggle'
 import WritingWizard, { type WizardResult } from '@/components/WritingWizard'
+import CharactersTab from '@/components/CharactersTab'
+import WorldNotesTab from '@/components/WorldNotesTab'
+import PlotTab from '@/components/PlotTab'
 import type { Episode, Novel } from '@/types'
+
+type Tab = 'episodes' | 'characters' | 'world' | 'plot'
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'episodes',   label: '회차' },
+  { id: 'characters', label: '등장인물' },
+  { id: 'world',      label: '세계관' },
+  { id: 'plot',       label: '플롯' },
+]
 
 export default function NovelPage() {
   const { novelId } = useParams<{ novelId: string }>()
@@ -39,6 +50,7 @@ export default function NovelPage() {
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [wizardOpen, setWizardOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<Tab>('episodes')
   const dragIndexRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -395,7 +407,40 @@ export default function NovelPage() {
           )
         })()}
 
-        <div className="mb-3 flex items-center justify-between">
+        {/* 탭 */}
+        <div className="mb-4 flex border-b border-gray-200 dark:border-gray-700">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 text-sm font-medium transition border-b-2 -mb-px ${
+                activeTab === tab.id
+                  ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* 등장인물 탭 */}
+        {activeTab === 'characters' && user && novelId && (
+          <CharactersTab uid={user.uid} novelId={novelId} />
+        )}
+
+        {/* 세계관 탭 */}
+        {activeTab === 'world' && user && novelId && (
+          <WorldNotesTab uid={user.uid} novelId={novelId} />
+        )}
+
+        {/* 플롯 탭 */}
+        {activeTab === 'plot' && user && novelId && (
+          <PlotTab uid={user.uid} novelId={novelId} />
+        )}
+
+        {/* 회차 탭 */}
+        {activeTab === 'episodes' && (<><div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h2 className="font-semibold text-gray-700 dark:text-gray-300">회차 목록</h2>
             {episodes.length > 1 && !selectMode && (
@@ -672,6 +717,7 @@ export default function NovelPage() {
             ))}
           </ul>
         )}
+        </>)}
       </main>
 
       {wizardOpen && (
