@@ -16,6 +16,7 @@ import { db } from '@/lib/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import AuthButton from '@/components/AuthButton'
 import DarkModeToggle from '@/components/DarkModeToggle'
+import WritingWizard, { type WizardResult } from '@/components/WritingWizard'
 import type { Episode, Novel } from '@/types'
 
 export default function NovelPage() {
@@ -37,6 +38,7 @@ export default function NovelPage() {
   const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null)
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [wizardOpen, setWizardOpen] = useState(false)
   const dragIndexRef = useRef<number | null>(null)
 
   useEffect(() => {
@@ -192,6 +194,29 @@ export default function NovelPage() {
       return [...prev.slice(0, idx + 1), newEp, ...prev.slice(idx + 1)]
     })
   }
+
+  async function handleWizardCreate({ title: epTitleFromWizard, content }: WizardResult) {
+    if (!user || !novelId) return
+    setWizardOpen(false)
+    const order = episodes.length + 1
+    const epRef = collection(db, 'users', user.uid, 'novels', novelId, 'episodes')
+    const ref = await addDoc(epRef, {
+      novelId,
+      title: epTitleFromWizard || `${order}화`,
+      content,
+      order,
+      charCount: content.length,
+      excerpt: content.slice(0, 80),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    await updateDoc(doc(db, 'users', user.uid, 'novels', novelId), {
+      episodeCount: order,
+      updatedAt: serverTimestamp(),
+    })
+    navigate(`/novels/${novelId}/episodes/${ref.id}`)
+  }
+
 
   async function handleDeleteEpisode(epId: string) {
     if (!user || !novelId || !window.confirm('회차를 삭제할까요?')) return
@@ -474,28 +499,40 @@ export default function NovelPage() {
 
         {episodes.length === 0 ? (
           <div className="flex flex-col items-center pt-8">
-            <div className="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-              <div className="mb-6 text-center">
-                <p className="mb-3 text-4xl">✍️</p>
-                <h2 className="mb-1 text-lg font-bold text-gray-800 dark:text-gray-100">첫 회차를 시작해보세요</h2>
-                <p className="text-sm text-gray-400 dark:text-gray-500">제목을 입력하고 바로 쓰기 시작하세요</p>
+            <div className="w-full max-w-sm space-y-3">
+              {/* AI 마법사 */}
+              <button
+                onClick={() => setWizardOpen(true)}
+                className="w-full rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-violet-50 p-6 text-center shadow-sm transition hover:border-indigo-300 hover:shadow-md active:scale-[0.98] dark:border-indigo-800 dark:from-indigo-950/50 dark:to-violet-950/50 dark:hover:border-indigo-700"
+              >
+                <p className="mb-2 text-3xl">✨</p>
+                <p className="font-bold text-indigo-700 dark:text-indigo-300">AI와 함께 첫 회차 쓰기</p>
+                <p className="mt-1 text-xs text-indigo-400 dark:text-indigo-500">뼈대 구성 → 첫 장면 자동 생성 → 수정</p>
+              </button>
+
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+                <span className="text-xs text-gray-400">또는 직접 시작</span>
+                <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
               </div>
-              <form onSubmit={handleCreateEpisode} className="space-y-3">
-                <input
-                  autoFocus
-                  required
-                  placeholder="예: 1화, 프롤로그…"
-                  value={epTitle}
-                  onChange={(e) => setEpTitle(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500"
-                />
-                <button
-                  type="submit"
-                  className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-[0.98]"
-                >
-                  만들고 시작하기
-                </button>
-              </form>
+
+              <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <form onSubmit={handleCreateEpisode} className="space-y-3">
+                  <input
+                    required
+                    placeholder="예: 1화, 프롤로그…"
+                    value={epTitle}
+                    onChange={(e) => setEpTitle(e.target.value)}
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500"
+                  />
+                  <button
+                    type="submit"
+                    className="w-full rounded-xl bg-gray-800 py-3 text-sm font-semibold text-white hover:bg-gray-700 active:scale-[0.98] dark:bg-gray-700 dark:hover:bg-gray-600"
+                  >
+                    빈 에디터로 시작하기
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         ) : visible.length === 0 ? (
@@ -636,6 +673,10 @@ export default function NovelPage() {
           </ul>
         )}
       </main>
+
+      {wizardOpen && (
+        <WritingWizard onClose={() => setWizardOpen(false)} onCreate={handleWizardCreate} />
+      )}
     </div>
   )
 }
