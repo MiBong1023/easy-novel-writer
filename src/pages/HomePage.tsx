@@ -388,10 +388,11 @@ export default function HomePage() {
             </Link>
             <button
               onClick={() => setWizardOpen(true)}
-              className="hidden sm:block rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+              className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
               title="AI와 함께 소설 시작하기"
             >
-              ✨ AI로 시작
+              <span className="sm:hidden">✨</span>
+              <span className="hidden sm:inline">✨ AI로 시작</span>
             </button>
             <button
               onClick={() => setCreating(true)}
@@ -505,39 +506,53 @@ export default function HomePage() {
         )}
 
         {novels.length === 0 ? (
-          <div className="flex flex-col items-center pt-10">
-            <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-              <div className="mb-7 text-center">
-                <p className="mb-3 text-5xl">✍️</p>
-                <h2 className="mb-1 text-xl font-bold text-gray-800 dark:text-gray-100">첫 작품을 시작해보세요</h2>
-                <p className="text-sm text-gray-400 dark:text-gray-500">제목만 입력하면 바로 에디터로 이동합니다</p>
+          <div className="flex flex-col items-center pt-10 px-0 sm:px-0">
+            <div className="w-full max-w-md space-y-3">
+              {/* AI 마법사 버튼 */}
+              <button
+                onClick={() => setWizardOpen(true)}
+                className="w-full rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-violet-50 p-6 text-center shadow-sm transition hover:border-indigo-300 hover:shadow-md active:scale-[0.98] dark:border-indigo-800 dark:from-indigo-950/50 dark:to-violet-950/50 dark:hover:border-indigo-700"
+              >
+                <p className="mb-2 text-3xl">✨</p>
+                <p className="font-bold text-indigo-700 dark:text-indigo-300">AI와 함께 시작하기</p>
+                <p className="mt-1 text-xs text-indigo-400 dark:text-indigo-500">목적 설정 → 장르 선택 → 뼈대 구성 → 첫 장면 생성</p>
+              </button>
+
+              {/* 구분선 */}
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
+                <span className="text-xs text-gray-400">또는 직접 시작</span>
+                <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
               </div>
-              <form onSubmit={handleCreate} className="space-y-3">
-                <input
-                  autoFocus
-                  required
-                  placeholder="작품 제목"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500"
-                />
-                <textarea
-                  placeholder="간단한 설명 (선택)"
-                  value={desc}
-                  onChange={(e) => setDesc(e.target.value)}
-                  rows={2}
-                  className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500"
-                />
-                {error && (
-                  <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-400">{error}</p>
-                )}
-                <button
-                  type="submit"
-                  className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 active:scale-[0.98]"
-                >
-                  만들고 시작하기
-                </button>
-              </form>
+
+              {/* 수동 생성 폼 */}
+              <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                <form onSubmit={handleCreate} className="space-y-3">
+                  <input
+                    required
+                    placeholder="작품 제목"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500"
+                  />
+                  <textarea
+                    placeholder="간단한 설명 (선택)"
+                    value={desc}
+                    onChange={(e) => setDesc(e.target.value)}
+                    rows={2}
+                    className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:placeholder:text-gray-500"
+                  />
+                  {error && (
+                    <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-400">{error}</p>
+                  )}
+                  <button
+                    type="submit"
+                    className="w-full rounded-xl bg-gray-800 py-3 text-sm font-semibold text-white hover:bg-gray-700 active:scale-[0.98] dark:bg-gray-700 dark:hover:bg-gray-600"
+                  >
+                    빈 에디터로 시작하기
+                  </button>
+                </form>
+              </div>
             </div>
           </div>
         ) : filteredNovels.length === 0 ? (

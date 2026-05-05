@@ -598,7 +598,7 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
             onChange={(e) => setBoneInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && e.metaKey) saveBoneAndNext() }}
             placeholder={q.example}
-            rows={5}
+            rows={4}
             className="flex-1 w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-relaxed placeholder:text-gray-300 focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-600"
           />
           <p className="text-[10px] text-gray-300 dark:text-gray-700">{q.example}</p>
@@ -715,11 +715,14 @@ function Shell({
   progress: number
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center bg-gray-900/60 sm:p-4 backdrop-blur-sm">
       <div
-        className="relative flex w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900"
-        style={{ maxHeight: '90vh', minHeight: 480 }}
+        className="relative flex w-full flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 sm:max-w-lg h-[92dvh] sm:h-auto sm:max-h-[90vh]"
       >
+        {/* 모바일 드래그 핸들 */}
+        <div className="flex justify-center pt-2.5 pb-0 sm:hidden shrink-0">
+          <div className="h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600" />
+        </div>
         {/* 진행 바 */}
         <div className="absolute left-0 top-0 z-10 h-1 w-full overflow-hidden rounded-t-2xl bg-gray-100 dark:bg-gray-800">
           <div
@@ -743,7 +746,7 @@ function Shell({
         >
           ✕
         </button>
-        <div className="flex flex-1 flex-col overflow-hidden" style={{ paddingTop: 4 }}>
+        <div className="flex flex-1 flex-col overflow-hidden pt-1">
           {children}
         </div>
       </div>
