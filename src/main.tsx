@@ -1,17 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import * as Sentry from '@sentry/react'
 import './index.css'
 import ErrorBoundary from './components/ErrorBoundary'
-
-Sentry.init({
-  dsn: import.meta.env.VITE_SENTRY_DSN,
-  environment: import.meta.env.MODE,
-  enabled: import.meta.env.PROD,
-  tracesSampleRate: 0.2,
-  replaysOnErrorSampleRate: 1.0,
-})
 import HomePage from './pages/HomePage'
 import NovelPage from './pages/NovelPage'
 import EditorPage from './pages/EditorPage'

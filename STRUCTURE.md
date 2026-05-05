@@ -18,7 +18,6 @@
 | AI 엔진 | Google Gemini 2.5 Flash (무료 티어, `GEMINI_API_KEY` 환경 변수) |
 | PWA | Web App Manifest (`public/manifest.json`) + Service Worker (`public/sw.js`) |
 | 보안 규칙 | Firestore Security Rules (`firestore.rules`) |
-| 오류 모니터링 | Sentry (`@sentry/react`, `VITE_SENTRY_DSN` 환경 변수, 프로덕션만 활성화) |
 | 웹 분석 | Cloudflare Web Analytics (index.html 스크립트 태그) |
 
 ---
