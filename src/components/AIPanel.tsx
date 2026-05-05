@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { streamGemini, msg, type GeminiMessage } from '@/lib/gemini'
+import { streamGemini, msg, type GeminiMessage, aiUsageWarning, isAILimitReached, getAIUsageToday } from '@/lib/gemini'
 
 type HelpType = 'continue' | 'refine' | 'expand' | 'shorten' | 'tone' | 'spellfix' | 'custom'
 
@@ -30,6 +30,10 @@ const SYSTEM: Record<HelpType, string> = {
 }
 
 export default function AIPanel({ value, selectedText, onInsert, onClose }: Props) {
+  const usageWarning = aiUsageWarning()
+  const limitReached = isAILimitReached()
+  const usedToday = getAIUsageToday()
+
   const [activeType, setActiveType] = useState<HelpType | null>(null)
   const [customInput, setCustomInput] = useState('')
   const [streaming, setStreaming] = useState(false)
@@ -118,9 +122,21 @@ export default function AIPanel({ value, selectedText, onInsert, onClose }: Prop
           <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:bg-blue-900/60 dark:text-blue-400">
             Gemini
           </span>
+          {usedToday >= 200 && (
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${limitReached ? 'bg-red-100 text-red-600 dark:bg-red-900/60 dark:text-red-400' : 'bg-amber-100 text-amber-600 dark:bg-amber-900/60 dark:text-amber-400'}`}>
+              {usedToday}/250
+            </span>
+          )}
         </div>
         <button onClick={onClose} className="rounded p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">✕</button>
       </div>
+
+      {/* 사용량 경고 */}
+      {usageWarning && (
+        <div className={`shrink-0 px-4 py-2 text-[11px] ${limitReached ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' : 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400'}`}>
+          {usageWarning}
+        </div>
+      )}
 
       {/* 도움 유형 버튼 */}
       <div className="shrink-0 border-b border-gray-100 p-3 dark:border-gray-700">
@@ -129,7 +145,7 @@ export default function AIPanel({ value, selectedText, onInsert, onClose }: Prop
             <button
               key={id}
               onClick={() => run(id)}
-              disabled={streaming}
+              disabled={streaming || limitReached}
               className={`rounded-lg px-2 py-1.5 text-xs font-medium transition disabled:opacity-40 ${
                 activeType === id
                   ? 'bg-indigo-600 text-white'
@@ -186,13 +202,13 @@ export default function AIPanel({ value, selectedText, onInsert, onClose }: Prop
             type="text"
             value={customInput}
             onChange={(e) => setCustomInput(e.target.value)}
-            placeholder="직접 요청… (Enter)"
-            disabled={streaming}
+            placeholder={limitReached ? '오늘 한도 초과' : '직접 요청… (Enter)'}
+            disabled={streaming || limitReached}
             className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs placeholder:text-gray-400 focus:border-indigo-400 focus:outline-none disabled:opacity-60 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-600"
           />
           <button
             type="submit"
-            disabled={!customInput.trim() || streaming}
+            disabled={!customInput.trim() || streaming || limitReached}
             className="rounded-lg bg-indigo-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-40"
           >
             ↵

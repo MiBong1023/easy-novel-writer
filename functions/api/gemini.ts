@@ -41,11 +41,21 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     geminiBody.systemInstruction = { parts: [{ text: body.systemPrompt }] }
   }
 
-  const resp = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(geminiBody),
-  })
+  // 분당 한도(RPM) 초과 시 최대 2회 재시도 (1s → 2s 간격)
+  let resp!: Response
+  for (let attempt = 0; attempt <= 2; attempt++) {
+    resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(geminiBody),
+    })
+    if (resp.status !== 429 || attempt === 2) break
+    // 일일 한도 초과는 바로 포기
+    const errClone = await resp.clone().json().catch(() => ({})) as { error?: { message?: string } }
+    const msg = errClone?.error?.message ?? ''
+    if (msg.toLowerCase().includes('day') || msg.toLowerCase().includes('daily')) break
+    await new Promise((r) => setTimeout(r, (attempt + 1) * 1200))
+  }
 
   if (!resp.ok) {
     let errMsg = '알 수 없는 오류가 발생했습니다.'
@@ -53,7 +63,12 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
       const errData = await resp.json() as { error?: { message?: string } }
       errMsg = errData?.error?.message ?? errMsg
     } catch {}
-    if (resp.status === 429) errMsg = '하루 AI 사용 한도에 도달했습니다. 잠시 후 다시 시도해주세요.'
+    if (resp.status === 429) {
+      const isDaily = errMsg.toLowerCase().includes('day') || errMsg.toLowerCase().includes('daily')
+      errMsg = isDaily
+        ? '오늘의 AI 도움 횟수를 모두 사용했어요. 내일 오전(한국 시간)에 초기화돼요.'
+        : '요청이 잠시 몰렸어요. 몇 초 후 다시 시도해주세요.'
+    }
     return json({ error: errMsg }, resp.status)
   }
 
