@@ -273,7 +273,7 @@ export default function HomePage() {
       userId: user.uid,
       color: 'indigo',
       episodeCount: 1,
-      tags: genreId !== 'other' ? [genreId] : [],
+      tags: [genreId],
       totalChars: content.length,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
