@@ -1,6 +1,6 @@
 # 쉬운 소설 작가 — 구조 문서
 
-> 마지막 업데이트: 2026-05-05 (Gemini AI 글쓰기 마법사, AIPanel 재작성, 회차 딥서치, 주간 비교, 목표 알림, 집중 모드 오버레이, 스크롤 위치 복원, lastEpisodeId 캐싱)
+> 마지막 업데이트: 2026-05-05 (SEO 메타태그·OG·Twitter Card, sitemap.xml, robots.txt, Sentry 오류 모니터링, Cloudflare Analytics)
 
 ---
 
@@ -18,6 +18,8 @@
 | AI 엔진 | Google Gemini 2.5 Flash (무료 티어, `GEMINI_API_KEY` 환경 변수) |
 | PWA | Web App Manifest (`public/manifest.json`) + Service Worker (`public/sw.js`) |
 | 보안 규칙 | Firestore Security Rules (`firestore.rules`) |
+| 오류 모니터링 | Sentry (`@sentry/react`, `VITE_SENTRY_DSN` 환경 변수, 프로덕션만 활성화) |
+| 웹 분석 | Cloudflare Web Analytics (index.html 스크립트 태그) |
 
 ---
 
@@ -277,6 +279,7 @@ Gemini API 클라이언트 헬퍼.
 - `streamGemini(messages, systemPrompt, onChunk, signal?)` — SSE 스트리밍, chunk 단위 콜백
 - `callGemini(messages, systemPrompt)` — 단일 응답 반환
 - `msg(role, text)` — GeminiMessage 생성 헬퍼
+- `getAIUsageToday()` / `incrementAIUsage()` / `isAILimitReached()` / `aiUsageWarning()` — 일일 사용량 추적
 
 ---
 
@@ -291,6 +294,7 @@ Gemini API 클라이언트 헬퍼.
 | `darkMode` | 다크모드 ON/OFF |
 | `scroll-{episodeId}` | 에디터 스크롤 위치 (px) |
 | `daily-writing-goal` | 통계 일일 목표 글자수 |
+| `ai-usage-YYYY-MM-DD` | 당일 AI 호출 횟수 (하루 250회 한도) |
 
 ## 세션 스토리지 키
 
