@@ -18,6 +18,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useGoogleLogin } from '@/hooks/useGoogleLogin'
 import NovelCard from '@/components/NovelCard'
 import DarkModeToggle from '@/components/DarkModeToggle'
+import WritingWizard, { type WizardResult } from '@/components/WritingWizard'
 import type { Novel, NovelColor, NovelGenre } from '@/types'
 import { NOVEL_GENRES } from '@/types'
 
@@ -151,6 +152,7 @@ export default function HomePage() {
   const [sortBy, setSortBy] = useState<'updated' | 'title' | 'episodes'>('updated')
   const [filterTag, setFilterTag] = useState<NovelGenre | null>(null)
   const [streak, setStreak] = useState(0)
+  const [wizardOpen, setWizardOpen] = useState(false)
   const navigate = useNavigate()
 
   const novelsRef = user ? collection(db, 'users', user.uid, 'novels') : null
@@ -262,6 +264,33 @@ export default function HomePage() {
     navigate(`/novels/${id}/episodes/${epRef.id}`)
   }
 
+  async function handleWizardCreate({ title: wTitle, genreId, content }: WizardResult) {
+    if (!user) return
+    setWizardOpen(false)
+    const novelRef = await addDoc(collection(db, 'users', user.uid, 'novels'), {
+      title: wTitle,
+      description: '',
+      userId: user.uid,
+      color: 'indigo',
+      episodeCount: 1,
+      tags: genreId !== 'other' ? [genreId] : [],
+      totalChars: content.length,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    const epRef = await addDoc(collection(db, 'users', user.uid, 'novels', novelRef.id, 'episodes'), {
+      novelId: novelRef.id,
+      title: '1화',
+      content,
+      order: 1,
+      charCount: content.length,
+      excerpt: content.slice(0, 80),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+    navigate(`/novels/${novelRef.id}/episodes/${epRef.id}`)
+  }
+
   async function handleCardClick(id: string) {
     const novel = novels.find((n) => n.id === id)
     if (!user || !novel) return
@@ -357,6 +386,13 @@ export default function HomePage() {
             >
               통계
             </Link>
+            <button
+              onClick={() => setWizardOpen(true)}
+              className="hidden sm:block rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
+              title="AI와 함께 소설 시작하기"
+            >
+              ✨ AI로 시작
+            </button>
             <button
               onClick={() => setCreating(true)}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 active:scale-95"
@@ -519,6 +555,10 @@ export default function HomePage() {
           </div>
         )}
       </main>
+
+      {wizardOpen && (
+        <WritingWizard onClose={() => setWizardOpen(false)} onCreate={handleWizardCreate} />
+      )}
     </div>
   )
 }
