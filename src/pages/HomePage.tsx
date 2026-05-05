@@ -378,29 +378,35 @@ export default function HomePage() {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* 데스크탑 전용 */}
             <DarkModeToggle />
             <Link
               to="/stats"
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-500 transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+              className="hidden sm:block rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-500 transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
             >
               통계
             </Link>
+
+            {/* AI 버튼: 모바일 아이콘 / 데스크탑 텍스트 */}
             <button
               onClick={() => setWizardOpen(true)}
-              className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-400 dark:hover:bg-indigo-900/50"
               title="AI와 함께 소설 시작하기"
+              className="flex h-9 items-center justify-center rounded-lg border border-indigo-200 bg-indigo-50 font-medium text-indigo-600 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/50 dark:text-indigo-400 dark:hover:bg-indigo-900/50 px-2.5 sm:px-3 text-sm"
             >
               <span className="sm:hidden">✨</span>
               <span className="hidden sm:inline">✨ AI로 시작</span>
             </button>
+
+            {/* 새 작품: 모바일 단축 / 데스크탑 전체 */}
             <button
               onClick={() => setCreating(true)}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 active:scale-95"
+              className="flex h-9 items-center rounded-lg bg-indigo-600 px-3 text-sm font-medium text-white hover:bg-indigo-700 active:scale-95"
             >
-              + 새 작품
+              <span className="sm:hidden">+</span>
+              <span className="hidden sm:inline">+ 새 작품</span>
             </button>
-            {/* 로그아웃 등은 AuthButton 대신 간단하게 처리 */}
+
             <UserMenu user={user} />
           </div>
         </div>
