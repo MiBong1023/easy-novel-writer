@@ -3,7 +3,10 @@ interface Props {
 }
 
 const shortcuts = [
-  { keys: ['Cmd', 'F'], desc: '찾기 / 바꾸기 열기' },
+  { keys: ['Cmd', 'S'], desc: '즉시 저장' },
+  { keys: ['Cmd', 'F'], desc: '찾기 / 바꾸기' },
+  { keys: ['Cmd', 'P'], desc: '미리보기 열기/닫기' },
+  { keys: ['Cmd', '⇧', 'F'], desc: '집중 모드 켜기/끄기' },
   { keys: ['Tab'], desc: '들여쓰기 (2칸 공백)' },
   { keys: ['"'], desc: '스마트 따옴표 자동 변환 (자동변환 ON)' },
   { keys: ['...'], desc: '줄임표(…) 자동 변환 (자동변환 ON)' },

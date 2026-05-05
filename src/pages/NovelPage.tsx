@@ -193,6 +193,22 @@ export default function NovelPage() {
     })
   }
 
+  async function handleMoveEpisode(id: string, dir: -1 | 1) {
+    if (!user || !novelId) return
+    const idx = episodes.findIndex((ep) => ep.id === id)
+    const newIdx = idx + dir
+    if (newIdx < 0 || newIdx >= episodes.length) return
+    const updated = [...episodes]
+    const [moved] = updated.splice(idx, 1)
+    updated.splice(newIdx, 0, moved)
+    const reordered = updated.map((ep, i) => ({ ...ep, order: i + 1 }))
+    setEpisodes(reordered)
+    await Promise.all([
+      updateDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', id), { order: newIdx + 1 }),
+      updateDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', episodes[newIdx].id), { order: idx + 1 }),
+    ])
+  }
+
   function handleDragStart(index: number) {
     dragIndexRef.current = index
   }
@@ -460,11 +476,27 @@ export default function NovelPage() {
                     className="h-4 w-4 shrink-0 rounded accent-indigo-500"
                   />
                 ) : (
-                  <span
-                    onClick={(e) => e.stopPropagation()}
-                    className="cursor-grab text-gray-200 select-none dark:text-gray-700"
-                    aria-hidden="true"
-                  >⠿</span>
+                  <>
+                    {/* 데스크탑: 드래그 핸들 */}
+                    <span
+                      onClick={(e) => e.stopPropagation()}
+                      className="hidden sm:inline cursor-grab text-gray-200 select-none dark:text-gray-700"
+                      aria-hidden="true"
+                    >⠿</span>
+                    {/* 모바일: ↑↓ 순서 버튼 */}
+                    <div className="flex sm:hidden flex-col" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleMoveEpisode(ep.id, -1)}
+                        disabled={index === 0}
+                        className="rounded px-1 py-0.5 text-[10px] text-gray-300 hover:text-indigo-500 disabled:opacity-20 dark:text-gray-700"
+                      >▲</button>
+                      <button
+                        onClick={() => handleMoveEpisode(ep.id, 1)}
+                        disabled={index === visible.length - 1}
+                        className="rounded px-1 py-0.5 text-[10px] text-gray-300 hover:text-indigo-500 disabled:opacity-20 dark:text-gray-700"
+                      >▼</button>
+                    </div>
+                  </>
                 )}
                 {editingEpId === ep.id ? (
                   <input

@@ -41,13 +41,18 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
   }, autoConvert)
   const { goal, setGoal } = useGoal(episodeId)
   const { count, countNoSpace, percent } = useWordCount(value, goal)
-  const saveStatus = useAutoSave(novelId, episodeId, value, userId)
+  const { status: saveStatus, saveNow } = useAutoSave(novelId, episodeId, value, userId)
   const fr = useFindReplace(value, (v) => { setValue(v); onContentChange?.(v) }, ref)
   const sc = useSpellCheck()
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
       e.preventDefault()
+      return
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+      e.preventDefault()
+      saveNow()
       return
     }
     editorKeyDown(e)

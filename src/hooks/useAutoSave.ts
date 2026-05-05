@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { doc, setDoc, serverTimestamp, collection, addDoc, increment, updateDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 
@@ -15,6 +15,46 @@ export function useAutoSave(
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prevContentRef = useRef(content)
   const lastVersionTimeRef = useRef(0)
+  const latestContentRef = useRef(content)
+  latestContentRef.current = content
+
+  const performSave = useCallback(async (currentContent: string) => {
+    if (!userId || !novelId || !episodeId) return
+    if (currentContent === prevContentRef.current) { setStatus('saved'); return }
+
+    setStatus('saving')
+    try {
+      const ref = doc(db, 'users', userId, 'novels', novelId, 'episodes', episodeId)
+      const delta = currentContent.length - prevContentRef.current.length
+      await setDoc(ref, { content: currentContent, updatedAt: serverTimestamp(), charCount: currentContent.length, excerpt: currentContent.slice(0, 80) }, { merge: true })
+
+      if (delta > 0) {
+        const today = new Date().toISOString().slice(0, 10)
+        const statsRef = doc(db, 'users', userId, 'stats', today)
+        updateDoc(statsRef, { charsAdded: increment(delta) }).catch(() =>
+          setDoc(statsRef, { charsAdded: delta, date: today })
+        )
+      }
+
+      if (delta !== 0) {
+        const novelRef = doc(db, 'users', userId, 'novels', novelId)
+        updateDoc(novelRef, { totalChars: increment(delta) }).catch(() => {})
+      }
+
+      prevContentRef.current = currentContent
+      setHasUnsaved(false)
+      setStatus('saved')
+
+      const now = Date.now()
+      if (now - lastVersionTimeRef.current >= 5 * 60 * 1000) {
+        lastVersionTimeRef.current = now
+        const versionsRef = collection(db, 'users', userId, 'novels', novelId, 'episodes', episodeId, 'versions')
+        addDoc(versionsRef, { content: currentContent, charCount: currentContent.length, savedAt: serverTimestamp() }).catch(() => {})
+      }
+    } catch {
+      setStatus('error')
+    }
+  }, [userId, novelId, episodeId])
 
   useEffect(() => {
     if (!userId || !novelId || !episodeId) return
@@ -22,51 +62,13 @@ export function useAutoSave(
 
     setHasUnsaved(true)
     if (timerRef.current) clearTimeout(timerRef.current)
-
-    timerRef.current = setTimeout(async () => {
-      setStatus('saving')
-      try {
-        const ref = doc(db, 'users', userId, 'novels', novelId, 'episodes', episodeId)
-        const delta = content.length - prevContentRef.current.length
-        await setDoc(ref, { content, updatedAt: serverTimestamp(), charCount: content.length, excerpt: content.slice(0, 80) }, { merge: true })
-
-        // 오늘 작성량 기록 (증가분만)
-        if (delta > 0) {
-          const today = new Date().toISOString().slice(0, 10)
-          const statsRef = doc(db, 'users', userId, 'stats', today)
-          updateDoc(statsRef, { charsAdded: increment(delta) }).catch(() =>
-            setDoc(statsRef, { charsAdded: delta, date: today })
-          )
-        }
-
-        // 작품 총 글자수 반영 (증감 모두)
-        if (delta !== 0) {
-          const novelRef = doc(db, 'users', userId, 'novels', novelId)
-          updateDoc(novelRef, { totalChars: increment(delta) }).catch(() => {})
-        }
-
-        prevContentRef.current = content
-        setHasUnsaved(false)
-        setStatus('saved')
-
-        // 5분마다 버전 스냅샷 저장
-        const now = Date.now()
-        if (now - lastVersionTimeRef.current >= 5 * 60 * 1000) {
-          lastVersionTimeRef.current = now
-          const versionsRef = collection(db, 'users', userId, 'novels', novelId, 'episodes', episodeId, 'versions')
-          addDoc(versionsRef, { content, charCount: content.length, savedAt: serverTimestamp() }).catch(() => {})
-        }
-      } catch {
-        setStatus('error')
-      }
-    }, 1500)
+    timerRef.current = setTimeout(() => performSave(content), 1500)
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [content, userId, novelId, episodeId])
+  }, [content, userId, novelId, episodeId, performSave])
 
-  // 미저장 내용 있을 때 탭 닫기/이탈 경고
   useEffect(() => {
     function handler(e: BeforeUnloadEvent) {
       if (!hasUnsaved) return
@@ -77,5 +79,10 @@ export function useAutoSave(
     return () => window.removeEventListener('beforeunload', handler)
   }, [hasUnsaved])
 
-  return status
+  function saveNow() {
+    if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null }
+    performSave(latestContentRef.current)
+  }
+
+  return { status, saveNow }
 }

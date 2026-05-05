@@ -103,6 +103,22 @@ export default function EditorPage() {
     document.title = novelTitle ? `${trimmed} — ${novelTitle}` : trimmed
   }
 
+  // Cmd+P → 미리보기, Cmd+Shift+F → 집중 모드
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'p') {
+        e.preventDefault()
+        setPreviewOpen((v) => !v)
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'f') {
+        e.preventDefault()
+        setFocusMode((v) => !v)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   function handleExport() {
     if (!episode) return
     const blob = new Blob([contentRef.current], { type: 'text/plain;charset=utf-8' })
@@ -112,6 +128,29 @@ export default function EditorPage() {
     a.download = `${episode.title}.txt`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  function handleExportPdf() {
+    if (!episode) return
+    const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const body = contentRef.current.split('\n')
+      .map((l) => l.trim() === '' ? '<div class="gap"></div>' : `<p>${esc(l)}</p>`)
+      .join('\n')
+    const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8"><title>${esc(episode.title)}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;color:#1a1a1a;line-height:2.1;font-size:15px}
+  .wrap{max-width:580px;margin:0 auto;padding:60px 40px}
+  h1{font-size:20px;font-weight:bold;text-align:center;margin-bottom:60px}
+  p{text-indent:1em}
+  .gap{height:1em}
+  @media print{@page{margin:20mm 25mm;size:A4}.wrap{padding:0;max-width:100%}}
+</style></head><body><div class="wrap"><h1>${esc(episode.title)}</h1>
+${body}</div><script>window.onload=function(){setTimeout(window.print,200)}</script></body></html>`
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const win = window.open(url, '_blank')
+    if (win) setTimeout(() => URL.revokeObjectURL(url), 30000)
   }
 
   function handleExportMd() {
@@ -264,6 +303,13 @@ export default function EditorPage() {
           >
             ↓ md
           </button>
+          <button
+            onClick={handleExportPdf}
+            title="PDF로 내보내기 (인쇄 대화상자)"
+            className="hidden sm:block rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+          >
+            ↓ pdf
+          </button>
           {/* 공유 링크 — 만료 옵션 팝오버 */}
           <div className="relative hidden sm:block">
             <button
@@ -333,6 +379,12 @@ export default function EditorPage() {
                   className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   Markdown 내보내기
+                </button>
+                <button
+                  onClick={() => { handleExportPdf(); setHeaderMenuOpen(false) }}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  PDF 내보내기
                 </button>
                 <button
                   onClick={() => { handleShare(7); setHeaderMenuOpen(false) }}
