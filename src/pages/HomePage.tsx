@@ -372,7 +372,7 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-4xl items-center justify-between">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100">쉬운 소설 작가</h1>
-            {streak > 0 && (
+            {streak > 0 && novels.length > 0 && (
               <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-600 dark:bg-amber-950/60 dark:text-amber-400" title="연속 글쓰기 일수">
                 🔥 {streak}일
               </span>
