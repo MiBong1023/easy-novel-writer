@@ -237,7 +237,7 @@ export default function ProgressBar({
           <button
             onClick={onAI}
             title="AI 글쓰기 보조"
-            className={`hidden sm:block rounded-md border px-2.5 py-1 text-xs transition-colors ${
+            className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
               aiActive
                 ? 'border-indigo-300 bg-indigo-50 text-indigo-600 dark:border-indigo-700 dark:bg-indigo-950 dark:text-indigo-400'
                 : 'border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'
@@ -313,14 +313,6 @@ export default function ProgressBar({
                 </div>
               </div>
             )}
-            <div className="border-t border-gray-100 dark:border-gray-700" />
-            <button
-              onClick={() => { onAI(); setMobileMenuOpen(false) }}
-              className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 ${aiActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300'}`}
-            >
-              AI 글쓰기 보조
-              {aiActive && <span className="text-xs text-indigo-500">ON</span>}
-            </button>
           </div>
         </>
       )}

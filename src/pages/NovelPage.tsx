@@ -171,19 +171,26 @@ export default function NovelPage() {
     const snap = await getDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', ep.id))
     const content = snap.exists() ? (snap.data().content as string) : ''
     const epRef = collection(db, 'users', user.uid, 'novels', novelId, 'episodes')
+    // order를 원본 + 0.5로 설정해 원본 바로 아래에 삽입
+    const newOrder = ep.order + 0.5
     const newRef = await addDoc(epRef, {
       novelId,
       title: `${ep.title} (복사본)`,
       content,
-      order: episodes.length + 1,
+      order: newOrder,
       charCount: ep.charCount,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
-    setEpisodes((prev) => [
-      ...prev,
-      { id: newRef.id, novelId: novelId!, title: `${ep.title} (복사본)`, content, order: prev.length + 1, charCount: ep.charCount, createdAt: new Date(), updatedAt: new Date() },
-    ])
+    setEpisodes((prev) => {
+      const idx = prev.findIndex((e) => e.id === ep.id)
+      const newEp: Episode = {
+        id: newRef.id, novelId: novelId!, title: `${ep.title} (복사본)`,
+        content, order: newOrder, charCount: ep.charCount,
+        createdAt: new Date(), updatedAt: new Date(),
+      }
+      return [...prev.slice(0, idx + 1), newEp, ...prev.slice(idx + 1)]
+    })
   }
 
   async function handleDeleteEpisode(epId: string) {

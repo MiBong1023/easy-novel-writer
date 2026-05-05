@@ -96,7 +96,21 @@ export default function AIPanel({ value, selectedText, onInsert, onClose }: Prop
   }
 
   return (
-    <div className="absolute right-0 top-0 z-20 flex h-full w-80 flex-col border-l border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-900">
+    <>
+      {/* 모바일 배경 딤 */}
+      <div
+        className="fixed inset-0 z-40 bg-gray-900/40 sm:hidden"
+        onClick={onClose}
+      />
+      <div className="
+        fixed inset-x-0 bottom-0 z-50 flex h-[72dvh] flex-col rounded-t-2xl border-t border-gray-200 bg-white shadow-2xl
+        sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-0 sm:h-full sm:w-80 sm:rounded-none sm:border-l sm:border-t-0 sm:shadow-xl
+        dark:border-gray-700 dark:bg-gray-900
+      ">
+      {/* 모바일 드래그 핸들 */}
+      <div className="flex justify-center pt-2.5 pb-0 sm:hidden shrink-0">
+        <div className="h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600" />
+      </div>
       {/* 헤더 */}
       <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
         <div className="flex items-center gap-2">
@@ -204,5 +218,6 @@ export default function AIPanel({ value, selectedText, onInsert, onClose }: Prop
         </div>
       )}
     </div>
+    </>
   )
 }
