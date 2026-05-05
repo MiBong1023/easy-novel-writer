@@ -269,6 +269,10 @@ export default function HomePage() {
       navigate(`/novels/${id}`)
       return
     }
+    if (novel.lastEpisodeId) {
+      navigate(`/novels/${id}/episodes/${novel.lastEpisodeId}`)
+      return
+    }
     const epSnap = await getDocs(
       query(collection(db, 'users', user.uid, 'novels', id, 'episodes'), orderBy('updatedAt', 'desc'), limit(1))
     )

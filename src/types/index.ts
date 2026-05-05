@@ -24,6 +24,7 @@ export interface Novel {
   color?: NovelColor
   totalChars?: number
   lastEpisodeTitle?: string
+  lastEpisodeId?: string
   tags?: NovelGenre[]
 }
 

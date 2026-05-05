@@ -31,6 +31,7 @@ export default function EditorPage() {
   const [sharing, setSharing] = useState(false)
   const [shareToast, setShareToast] = useState(false)
   const [shareMenuOpen, setShareMenuOpen] = useState(false)
+  const [liveCharCount, setLiveCharCount] = useState(0)
   const contentRef = useRef('')
 
   useEffect(() => {
@@ -58,6 +59,7 @@ export default function EditorPage() {
         }
         setEpisode(ep)
         contentRef.current = ep.content
+        setLiveCharCount(ep.content.length)
       }
       if (novelSnap.exists()) {
         setNovelTitle(novelSnap.data().title ?? '')
@@ -88,6 +90,7 @@ export default function EditorPage() {
     if (!episode || !user || !novelId) return
     updateDoc(doc(db, 'users', user.uid, 'novels', novelId), {
       lastEpisodeTitle: episode.title,
+      lastEpisodeId: episodeId,
     }).catch(() => {})
   }, [episode?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -411,7 +414,7 @@ ${body}</div><script>window.onload=function(){setTimeout(window.print,200)}</scr
           episodeId={episodeId}
           initialContent={episode.content}
           userId={user.uid}
-          onContentChange={(v) => { contentRef.current = v }}
+          onContentChange={(v) => { contentRef.current = v; setLiveCharCount(v.length) }}
           focusMode={focusMode}
           onToggleFocusMode={() => setFocusMode(true)}
         />
@@ -439,15 +442,18 @@ ${body}</div><script>window.onload=function(){setTimeout(window.print,200)}</scr
           </div>
         )}
 
-        {/* 집중 모드 나가기 버튼 */}
+        {/* 집중 모드 하단 오버레이 */}
         {focusMode && (
-          <button
-            onClick={() => setFocusMode(false)}
-            title="집중 모드 해제"
-            className="fixed right-5 top-5 z-50 rounded-lg px-3 py-1.5 text-xs text-gray-300 opacity-40 transition-all duration-200 hover:bg-gray-100 hover:opacity-100 hover:text-gray-600 dark:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-          >
-            Esc
-          </button>
+          <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 flex items-center gap-3 rounded-full bg-black/25 px-5 py-2 text-sm text-white/60 backdrop-blur-sm transition-opacity duration-300 hover:bg-black/40 hover:text-white/90">
+            <span className="tabular-nums">{liveCharCount.toLocaleString()}자</span>
+            <span className="text-white/25">·</span>
+            <button
+              onClick={() => setFocusMode(false)}
+              className="text-xs hover:text-white"
+            >
+              Esc 나가기
+            </button>
+          </div>
         )}
       </div>
     </div>

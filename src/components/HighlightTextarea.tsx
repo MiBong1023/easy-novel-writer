@@ -11,6 +11,7 @@ interface Props {
   highlights: Highlight[]
   onChange: React.ChangeEventHandler<HTMLTextAreaElement>
   onKeyDown: React.KeyboardEventHandler<HTMLTextAreaElement>
+  onScrollTop?: (scrollTop: number) => void
   spellCheck?: boolean
   placeholder?: string
   fontSize?: string  // e.g. 'text-sm' | 'text-base' | 'text-lg' | 'text-xl'
@@ -40,16 +41,17 @@ function buildHtml(text: string, highlights: Highlight[]): string {
 }
 
 const HighlightTextarea = forwardRef<HTMLTextAreaElement, Props>(
-  ({ value, highlights, fontSize = 'text-base', ...props }, ref) => {
+  ({ value, highlights, fontSize = 'text-base', onScrollTop, ...props }, ref) => {
     const backdropRef = useRef<HTMLDivElement>(null)
     const showing = highlights.length > 0
     const shared = `${BASE} ${fontSize}`
 
     function handleScroll(e: React.UIEvent<HTMLTextAreaElement>) {
+      const { scrollTop } = e.currentTarget
       if (backdropRef.current) {
-        backdropRef.current.style.transform =
-          `translateY(-${e.currentTarget.scrollTop}px)`
+        backdropRef.current.style.transform = `translateY(-${scrollTop}px)`
       }
+      onScrollTop?.(scrollTop)
     }
 
     return (

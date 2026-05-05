@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import { useAutoConvert } from '@/hooks/useAutoConvert'
 import { useEditor } from '@/hooks/useEditor'
@@ -39,6 +39,16 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
     setValue(v)
     onContentChange?.(v)
   }, autoConvert)
+
+  const scrollKey = `scroll-${episodeId}`
+  useEffect(() => {
+    const saved = localStorage.getItem(scrollKey)
+    if (saved && ref.current) ref.current.scrollTop = parseInt(saved, 10)
+  }, [scrollKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleScrollTop(scrollTop: number) {
+    localStorage.setItem(scrollKey, String(scrollTop))
+  }
   const { goal, setGoal } = useGoal(episodeId)
   const { count, countNoSpace, percent } = useWordCount(value, goal)
   const { status: saveStatus, saveNow } = useAutoSave(novelId, episodeId, value, userId)
@@ -198,6 +208,7 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
           ref={ref}
           value={value}
           fontSize={fontSize}
+          onScrollTop={handleScrollTop}
           highlights={[
             ...(fr.open ? fr.highlights : []),
             ...(spellCheckOpen && sc.checked ? getSpellHighlights(sc.errors) : []),
