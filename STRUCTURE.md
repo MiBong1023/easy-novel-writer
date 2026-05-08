@@ -1,6 +1,6 @@
 # 쉬운 소설 작가 — 구조 문서
 
-> 마지막 업데이트: 2026-05-05 (등장인물·세계관·플롯 탭 추가, SEO 메타태그·OG·Twitter Card, sitemap.xml, robots.txt, Cloudflare Analytics)
+> 마지막 업데이트: 2026-05-08 (AI 심화: 회차 자동 요약, 맥락 있는 이어쓰기, 등장인물·세계관·플롯 탭, SEO·sitemap·robots)
 
 ---
 
@@ -287,6 +287,20 @@ Gemini API 클라이언트 헬퍼.
 - `callGemini(messages, systemPrompt)` — 단일 응답 반환
 - `msg(role, text)` — GeminiMessage 생성 헬퍼
 - `getAIUsageToday()` / `incrementAIUsage()` / `isAILimitReached()` / `aiUsageWarning()` — 일일 사용량 추적
+
+### AI 심화 기능 (Phase 2-B)
+
+#### 회차 자동 요약
+- `useAutoSave.ts`: 첫 저장 시 `content.length >= 300`이면 Gemini로 60자 요약 자동 생성
+- 결과를 `episode.summary` 필드에 백그라운드 저장 (UI 차단 없음)
+- `summaryDoneRef`로 세션당 1회만 생성 (토큰 낭비 방지)
+
+#### 맥락 있는 이어쓰기
+- `AIPanel.tsx`: "이어쓰기" 클릭 시 `novelId`+`uid`+`episodeOrder`가 있으면
+  이전 회차(최대 3화) 요약/excerpt를 Firestore에서 조회
+- 조회 결과를 `【이전 회차 요약】` 형태로 user message 앞에 붙여 Gemini에 전달
+- 헤더에 `맥락 포함` 초록 배지 표시
+- `Editor`에 `initialSummary`, `episodeOrder` props 추가 → `EditorPage`에서 전달
 
 ---
 
