@@ -22,12 +22,14 @@ interface Props {
   episodeId: string
   initialContent: string
   userId: string
+  initialSummary?: string
+  episodeOrder?: number
   onContentChange?: (v: string) => void
   focusMode?: boolean
   onToggleFocusMode?: () => void
 }
 
-export default function Editor({ novelId, episodeId, initialContent, userId, onContentChange, focusMode, onToggleFocusMode }: Props) {
+export default function Editor({ novelId, episodeId, initialContent, userId, initialSummary, episodeOrder, onContentChange, focusMode, onToggleFocusMode }: Props) {
   const [value, setValue] = useState(initialContent)
   const [versionsOpen, setVersionsOpen] = useState(false)
   const [spellCheckOpen, setSpellCheckOpen] = useState(false)
@@ -51,7 +53,7 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
   }
   const { goal, setGoal } = useGoal(episodeId)
   const { count, countNoSpace, percent } = useWordCount(value, goal)
-  const { status: saveStatus, saveNow } = useAutoSave(novelId, episodeId, value, userId)
+  const { status: saveStatus, saveNow } = useAutoSave(novelId, episodeId, value, userId, !!initialSummary)
   const fr = useFindReplace(value, (v) => { setValue(v); onContentChange?.(v) }, ref)
   const sc = useSpellCheck()
 
@@ -189,6 +191,9 @@ export default function Editor({ novelId, episodeId, initialContent, userId, onC
             selectedText={selectedTextRef.current}
             onInsert={handleAIInsert}
             onClose={() => setAIOpen(false)}
+            novelId={novelId}
+            uid={userId}
+            episodeOrder={episodeOrder}
           />
         )}
         {spellCheckOpen && (

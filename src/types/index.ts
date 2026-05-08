@@ -36,6 +36,7 @@ export interface Episode {
   order: number
   charCount: number
   excerpt?: string
+  summary?: string
   createdAt: Date
   updatedAt: Date
 }

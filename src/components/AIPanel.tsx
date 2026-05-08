@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react'
+import { collection, getDocs, query, orderBy, limit, where } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 import { streamGemini, msg, type GeminiMessage, aiUsageWarning, isAILimitReached, getAIUsageToday } from '@/lib/gemini'
 
 type HelpType = 'continue' | 'refine' | 'expand' | 'shorten' | 'tone' | 'spellfix' | 'custom'
@@ -8,6 +10,9 @@ interface Props {
   selectedText: string
   onInsert: (text: string) => void
   onClose: () => void
+  novelId?: string
+  uid?: string
+  episodeOrder?: number
 }
 
 const HELP_BUTTONS: { id: HelpType; label: string }[] = [
@@ -29,7 +34,7 @@ const SYSTEM: Record<HelpType, string> = {
   custom:   '당신은 한국어 소설 전문 편집자입니다. 요청된 작업을 수행하고 결과 텍스트만 출력하세요.',
 }
 
-export default function AIPanel({ value, selectedText, onInsert, onClose }: Props) {
+export default function AIPanel({ value, selectedText, onInsert, onClose, novelId, uid, episodeOrder }: Props) {
   const usageWarning = aiUsageWarning()
   const limitReached = isAILimitReached()
   const usedToday = getAIUsageToday()
@@ -40,6 +45,7 @@ export default function AIPanel({ value, selectedText, onInsert, onClose }: Prop
   const [result, setResult] = useState('')
   const [error, setError] = useState('')
   const [history, setHistory] = useState<GeminiMessage[]>([])
+  const [hasContext, setHasContext] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
   async function run(type: HelpType, userOverride?: string) {
@@ -54,7 +60,30 @@ export default function AIPanel({ value, selectedText, onInsert, onClose }: Prop
 
     let userText: string
     if (type === 'continue') {
-      userText = value.slice(-600) || '소설을 시작해주세요.'
+      const currentChunk = value.slice(-600) || '소설을 시작해주세요.'
+
+      // 이전 회차 요약 컨텍스트 조회
+      let contextPrefix = ''
+      if (novelId && uid && episodeOrder && episodeOrder > 1) {
+        try {
+          const epRef = collection(db, 'users', uid, 'novels', novelId, 'episodes')
+          const snap = await getDocs(
+            query(epRef, where('order', '<', episodeOrder), orderBy('order', 'desc'), limit(3))
+          )
+          const prevEps = snap.docs
+            .map((d) => ({ order: d.data().order as number, summary: d.data().summary as string | undefined, excerpt: d.data().excerpt as string | undefined }))
+            .filter((ep) => ep.summary || ep.excerpt)
+            .reverse()
+          if (prevEps.length > 0) {
+            contextPrefix = '【이전 회차 요약】\n' +
+              prevEps.map((ep) => `${ep.order}화: ${ep.summary ?? ep.excerpt ?? ''}`).join('\n') +
+              '\n\n【현재 회차 내용 (이어쓰기 대상)】\n'
+            setHasContext(true)
+          }
+        } catch { /* 맥락 없이 진행 */ }
+      }
+
+      userText = contextPrefix + currentChunk
     } else if (type === 'custom') {
       userText = userOverride ?? customInput.trim()
       if (!userText) { setStreaming(false); return }
@@ -97,6 +126,7 @@ export default function AIPanel({ value, selectedText, onInsert, onClose }: Prop
     setHistory([])
     setCustomInput('')
     setStreaming(false)
+    setHasContext(false)
   }
 
   return (
@@ -122,6 +152,11 @@ export default function AIPanel({ value, selectedText, onInsert, onClose }: Prop
           <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-600 dark:bg-blue-900/60 dark:text-blue-400">
             Gemini
           </span>
+          {hasContext && (
+            <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600 dark:bg-emerald-900/60 dark:text-emerald-400">
+              맥락 포함
+            </span>
+          )}
           {usedToday >= 200 && (
             <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${limitReached ? 'bg-red-100 text-red-600 dark:bg-red-900/60 dark:text-red-400' : 'bg-amber-100 text-amber-600 dark:bg-amber-900/60 dark:text-amber-400'}`}>
               {usedToday}/250

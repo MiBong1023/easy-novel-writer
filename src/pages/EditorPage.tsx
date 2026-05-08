@@ -414,6 +414,8 @@ ${body}</div><script>window.onload=function(){setTimeout(window.print,200)}</scr
           episodeId={episodeId}
           initialContent={episode.content}
           userId={user.uid}
+          initialSummary={episode.summary}
+          episodeOrder={episode.order}
           onContentChange={(v) => { contentRef.current = v; setLiveCharCount(v.length) }}
           focusMode={focusMode}
           onToggleFocusMode={() => setFocusMode(true)}
