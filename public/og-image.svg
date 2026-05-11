@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e1b4b"/>
+      <stop offset="50%" style="stop-color:#312e81"/>
+      <stop offset="100%" style="stop-color:#1e1b4b"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:0.08"/>
+      <stop offset="100%" style="stop-color:#ffffff;stop-opacity:0.03"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Subtle grid lines -->
+  <g stroke="#ffffff" stroke-opacity="0.04" stroke-width="1">
+    <line x1="0" y1="105" x2="1200" y2="105"/>
+    <line x1="0" y1="210" x2="1200" y2="210"/>
+    <line x1="0" y1="315" x2="1200" y2="315"/>
+    <line x1="0" y1="420" x2="1200" y2="420"/>
+    <line x1="0" y1="525" x2="1200" y2="525"/>
+    <line x1="200" y1="0" x2="200" y2="630"/>
+    <line x1="400" y1="0" x2="400" y2="630"/>
+    <line x1="600" y1="0" x2="600" y2="630"/>
+    <line x1="800" y1="0" x2="800" y2="630"/>
+    <line x1="1000" y1="0" x2="1000" y2="630"/>
+  </g>
+
+  <!-- Glow orb left -->
+  <circle cx="200" cy="315" r="300" fill="#6366f1" fill-opacity="0.12"/>
+  <!-- Glow orb right -->
+  <circle cx="1000" cy="315" r="250" fill="#8b5cf6" fill-opacity="0.10"/>
+
+  <!-- Card -->
+  <rect x="80" y="80" width="1040" height="470" rx="24" fill="url(#card)" stroke="#ffffff" stroke-opacity="0.1" stroke-width="1"/>
+
+  <!-- Top badge -->
+  <rect x="540" y="130" width="120" height="32" rx="16" fill="#6366f1" fill-opacity="0.8"/>
+  <text x="600" y="151" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">AI 글쓰기</text>
+
+  <!-- Main title -->
+  <text x="600" y="280" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="72" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="-1">쉬운 소설 작가</text>
+
+  <!-- Subtitle -->
+  <text x="600" y="345" font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="28" font-weight="400" fill="#a5b4fc" text-anchor="middle">AI와 함께 쓰는 한국어 소설 창작 앱</text>
+
+  <!-- Divider -->
+  <line x1="480" y1="385" x2="720" y2="385" stroke="#6366f1" stroke-opacity="0.5" stroke-width="1"/>
+
+  <!-- Feature tags -->
+  <g font-family="system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="18" fill="#c7d2fe" text-anchor="middle">
+    <text x="340" y="430">✦ 이어쓰기</text>
+    <text x="500" y="430">✦ 맞춤법 교정</text>
+    <text x="680" y="430">✦ 플롯 분석</text>
+    <text x="860" y="430">✦ 소설 리뷰</text>
+  </g>
+
+  <!-- Bottom URL -->
+  <text x="600" y="510" font-family="system-ui, -apple-system, monospace" font-size="18" font-weight="400" fill="#6366f1" fill-opacity="0.8" text-anchor="middle" letter-spacing="1">novel.pages.dev</text>
+</svg>
