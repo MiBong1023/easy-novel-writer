@@ -66,6 +66,49 @@ const BACKBONE_QUESTIONS = [
   },
 ]
 
+// 문피아 웹소설 전용 뼈대 질문 (SKILL.md Phase 1/2 기반)
+const BACKBONE_QUESTIONS_WEBNOVEL = [
+  {
+    q: '서사 엔진: 독자가 다음 화에 100원을 내는 이유는 무엇인가요?',
+    hint: '핵심 아이러니나 정보 낙차 — 독자만 아는 것 vs 작중 인물이 모르는 것',
+    example: '예: "최강인데 아무도 안 믿어줘서 독자만 실제 실력을 아는 구조" / "회귀자만 아는 미래를 적들이 눈치채기 시작"',
+    badge: '서사 엔진',
+  },
+  {
+    q: '주인공의 핵심 설정과 갈등은 무엇인가요?',
+    hint: '독자가 주인공을 응원하게 만드는 이유 — 능력, 성격, 상처, 목표',
+    example: '예: "회귀한 S급 헌터. 전생에서 동료에게 배신당한 분노가 동력. 차갑지만 약자엔 의리"',
+    badge: '주인공 설정',
+  },
+  {
+    q: '이 작품만의 성장/능력 시스템은 무엇인가요?',
+    hint: '레벨업? 회귀? 각성? 스킬? 이 작품만의 방식이 왜 특별한가요?',
+    example: '예: "죽을수록 강해지는 능력 — 실패가 곧 성장이 되는 역설" / "타인의 기억을 흡수해 성장"',
+    badge: '성장 시스템',
+  },
+  {
+    q: '25화(유료전환) 시점의 클리프행어는 무엇인가요?',
+    hint: '"여기서 끊기면 100원 내고서라도 봐야 하는" 사건 — 정체 노출, 최강 적 등장, 숨겨둔 능력 각성 등',
+    example: '예: "주인공 정체 노출 위기" / "전생의 숙적이 현생에 등장" / "숨겨둔 진짜 능력 첫 공개"',
+    badge: '유료전환 훅',
+  },
+]
+
+// 장르별 1화 훅 패턴 (references/hook-patterns.md 기반)
+const GENRE_HOOKS: Record<string, string> = {
+  '현대 판타지 (현판)': '각성 실패자의 숨겨진 능력 / 최강자인데 약자 행세 / 이상한 스킬이 사기급',
+  '판타지 / 퓨전':      '회귀자의 전략적 행동 / 기연 획득 / 먼치킨 능력 첫 공개',
+  '무협':              '환생+기연 / 밑바닥에서 시작 / 전대 고수의 귀환 / 사파 출신 역주인공',
+  '게임 판타지':        '버그·히든 능력 발견 / NPC 시점 / 게임 시스템의 숨겨진 진실',
+  '경영 / 재벌물':      '미래 정보로 첫 투자 성공 / 가문 내 권력 투쟁 시작 / 무일푼 첫 종잣돈 마련',
+  '아카데미물':         '꼴찌 입학→실전 무쌍 반전 / 숨겨야 하는 정체 / 빙의로 원작 이벤트 정보 보유',
+  '스포츠물':          '숨겨진 재능·피지컬 발견 / 회귀 후 첫 경기 변화 / 분석·전략으로 강자 꺾기',
+  '연예계물':          '무명 첫 기회 포착 / 회귀 후 작품 선택 / 라이브 중 실력 노출',
+  '대체역사물':         '역사 전환점에 현대 지식 개입 / 유명 역사 인물에 빙의',
+  '로맨스 판타지 (로판)': '죽을 운명 캐릭에 빙의해 생존 도전 / 빌런에 빙의 / 원작과 다른 세계 발견',
+  '현대 로맨스':        '운명적 재회 / 계약 관계에서 감정 시작 / 신분 차이 첫 충돌',
+}
+
 const EXISTING_HELP_OPTIONS = [
   { id: '구조 재정리',   desc: '전체 흐름과 단락 구조를 다듬어드려요' },
   { id: '논리/흐름 강화', desc: '내용의 논리성과 전개 흐름을 강화해요' },
@@ -214,9 +257,12 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
 
     const ctx = genreDetail || format || '소설'
     const isWebnovel = format === '웹소설' || !!genreDetail
+    const hookHint = isWebnovel && genreDetail && GENRE_HOOKS[genreDetail]
+      ? `\n장르 훅 패턴 참고: ${GENRE_HOOKS[genreDetail]}`
+      : ''
     const systemPrompt = isWebnovel
       ? `당신은 문피아 웹소설 전문 작가입니다. ${ctx} 장르의 웹소설 1화를 작성합니다.
-문피아 편당결제 환경에서 독자가 2화를 바로 클릭하게 만드는 강한 훅으로 시작하세요.
+문피아 편당결제 환경에서 독자가 2화를 바로 클릭하게 만드는 강한 훅으로 시작하세요.${hookHint}
 - 분량: 800~1200자 내외 (1화 도입부 분량)
 - 빠른 전개, 사건 중심, 내면 독백 최소화
 - 마지막 문장은 다음 화가 궁금해지는 컷포인트로 마무리
@@ -557,7 +603,7 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
         <BigButton
           onClick={() => { setBoneIdx(0); setBoneInput(''); goTo('backbone') }}
           icon="🤖" label="네, 함께 만들어주세요"
-          sub="4가지 질문으로 작품 뼈대 구성"
+          sub={format === '웹소설' ? '서사 엔진·훅·유료전환까지 4가지 질문으로 설계' : '4가지 질문으로 작품 뼈대 구성'}
         />
         <BigButton
           onClick={() => { setDraft(''); handleCreate('') }}
@@ -568,10 +614,11 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
     </Shell>
   )
 
-  // Step 3-3: 뼈대 만들기 (4가지 질문)
+  // Step 3-3: 뼈대 만들기 (4가지 질문 — 웹소설 경로는 문피아 전용 질문 사용)
   if (step === 'backbone') {
-    const q = BACKBONE_QUESTIONS[boneIdx]
-    const isLast = boneIdx === BACKBONE_QUESTIONS.length - 1
+    const boneQuestions = format === '웹소설' ? BACKBONE_QUESTIONS_WEBNOVEL : BACKBONE_QUESTIONS
+    const q = boneQuestions[boneIdx]
+    const isLast = boneIdx === boneQuestions.length - 1
 
     function saveBoneAndNext() {
       const updated = backbone.map((v, i) => i === boneIdx ? boneInput.trim() : v)
@@ -598,7 +645,7 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
         {/* 진행 표시 */}
         <div className="shrink-0 border-b border-gray-100 px-6 pt-6 pb-4 dark:border-gray-700">
           <div className="flex items-center gap-1.5 mb-3">
-            {BACKBONE_QUESTIONS.map((_, i) => (
+            {boneQuestions.map((_, i) => (
               <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i <= boneIdx ? 'bg-indigo-500' : 'bg-gray-200 dark:bg-gray-700'}`} />
             ))}
           </div>
@@ -627,7 +674,7 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
             onClick={saveBoneAndNext}
             className="w-full rounded-xl bg-indigo-600 py-3 font-medium text-white hover:bg-indigo-700"
           >
-            {isLast ? '✨ 초안 생성하기' : `다음 (${boneIdx + 1}/4) →`}
+            {isLast ? '✨ 초안 생성하기' : `다음 (${boneIdx + 1}/${boneQuestions.length}) →`}
           </button>
           {boneInput.trim() === '' && (
             <button
