@@ -59,7 +59,7 @@ export default function SpecialCharPanel({ onInsert }: Props) {
             <button
               type="button"
               onMouseDown={editMode ? undefined : (e) => { e.preventDefault(); onInsert(value) }}
-              className="min-w-[2rem] rounded border border-gray-200 bg-white px-2 py-1 text-sm font-mono text-gray-700 transition hover:bg-gray-100 active:scale-95 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+              className="min-w-[2.5rem] min-h-[2.5rem] rounded border border-gray-200 bg-white px-2 py-1.5 text-sm font-mono text-gray-700 transition hover:bg-gray-100 active:scale-95 sm:min-w-[2rem] sm:min-h-0 sm:py-1 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
             >
               {label}
             </button>
@@ -82,7 +82,7 @@ export default function SpecialCharPanel({ onInsert }: Props) {
             onKeyDown={onAddKeyDown}
             placeholder="추가"
             maxLength={4}
-            className="w-16 rounded border border-indigo-300 bg-white px-2 py-1 text-sm focus:outline-none dark:border-indigo-600 dark:bg-gray-800 dark:text-gray-200"
+            className="w-16 min-h-[2.5rem] rounded border border-indigo-300 bg-white px-2 py-1.5 text-sm focus:outline-none sm:min-h-0 sm:py-1 dark:border-indigo-600 dark:bg-gray-800 dark:text-gray-200"
           />
         )}
       </div>

@@ -20,7 +20,18 @@ import WritingWizard, { type WizardResult } from '@/components/WritingWizard'
 import CharactersTab from '@/components/CharactersTab'
 import WorldNotesTab from '@/components/WorldNotesTab'
 import PlotTab from '@/components/PlotTab'
+import { streamGemini, msg, isAILimitReached } from '@/lib/gemini'
 import type { Episode, Novel } from '@/types'
+
+const REVIEW_SYSTEM = `당신은 한국어 소설 전문 편집자입니다. 주어진 소설의 전체 회차 요약을 분석하고 다음 항목을 리뷰해주세요:
+
+1. **전체 완성도**: 작품의 전반적인 구성과 완성도
+2. **인물 일관성**: 등장인물의 성격과 행동이 일관적인지
+3. **플롯 흐름**: 이야기의 전개가 자연스럽고 논리적인지
+4. **문체와 분위기**: 문체의 일관성과 분위기 조성
+5. **개선 제안**: 구체적인 개선점 2~3가지
+
+각 항목에 대해 구체적이고 건설적인 피드백을 제공하세요.`
 
 type Tab = 'episodes' | 'characters' | 'world' | 'plot'
 const TABS: { id: Tab; label: string }[] = [
@@ -51,7 +62,14 @@ export default function NovelPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [wizardOpen, setWizardOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('episodes')
+  const [reviewOpen, setReviewOpen] = useState(false)
+  const [reviewing, setReviewing] = useState(false)
+  const [reviewResult, setReviewResult] = useState('')
+  const [reviewError, setReviewError] = useState('')
+  const reviewAbortRef = useRef<AbortController | null>(null)
   const dragIndexRef = useRef<number | null>(null)
+  const touchDragRef = useRef<{ fromIndex: number } | null>(null)
+  const [touchDragging, setTouchDragging] = useState<number | null>(null)
 
   useEffect(() => {
     if (!loading && !user) { navigate('/'); return }
@@ -255,21 +273,6 @@ export default function NovelPage() {
     })
   }
 
-  async function handleMoveEpisode(id: string, dir: -1 | 1) {
-    if (!user || !novelId) return
-    const idx = episodes.findIndex((ep) => ep.id === id)
-    const newIdx = idx + dir
-    if (newIdx < 0 || newIdx >= episodes.length) return
-    const updated = [...episodes]
-    const [moved] = updated.splice(idx, 1)
-    updated.splice(newIdx, 0, moved)
-    const reordered = updated.map((ep, i) => ({ ...ep, order: i + 1 }))
-    setEpisodes(reordered)
-    await Promise.all([
-      updateDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', id), { order: newIdx + 1 }),
-      updateDoc(doc(db, 'users', user.uid, 'novels', novelId, 'episodes', episodes[newIdx].id), { order: idx + 1 }),
-    ])
-  }
 
   function handleDragStart(index: number) {
     dragIndexRef.current = index
@@ -288,8 +291,81 @@ export default function NovelPage() {
     dragIndexRef.current = index
   }
 
+  async function handleAIReview() {
+    if (!user || !novelId) return
+    if (isAILimitReached()) { setReviewError('오늘의 AI 사용 한도를 초과했습니다.'); return }
+    reviewAbortRef.current?.abort()
+    const ctrl = new AbortController()
+    reviewAbortRef.current = ctrl
+    setReviewing(true)
+    setReviewResult('')
+    setReviewError('')
+    try {
+      const epRef = collection(db, 'users', user.uid, 'novels', novelId, 'episodes')
+      const snap = await getDocs(query(epRef, orderBy('order', 'asc')))
+      const eps = snap.docs.map((d) => d.data() as { summary?: string; excerpt?: string; content?: string; title?: string; order?: number })
+      if (eps.length === 0) { setReviewError('회차 내용이 없습니다.'); setReviewing(false); return }
+      const combined = `소설 제목: ${novel?.title ?? '제목 없음'}\n\n` + eps.map((ep, i) => {
+        const text = ep.summary ?? ep.excerpt ?? (ep.content ?? '').slice(0, 400)
+        return `${ep.title ?? `${i + 1}화`}: ${text}`
+      }).join('\n\n')
+      let accumulated = ''
+      await streamGemini([msg('user', combined)], REVIEW_SYSTEM, (chunk) => {
+        accumulated += chunk
+        setReviewResult(accumulated)
+      }, ctrl.signal)
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') {
+        setReviewError((e as Error).message || 'AI 리뷰 중 오류가 발생했습니다.')
+      }
+    } finally {
+      setReviewing(false)
+    }
+  }
+
   async function handleDragEnd() {
     dragIndexRef.current = null
+    if (!user || !novelId) return
+    setEpisodes((prev) => {
+      prev.forEach((ep, i) => {
+        updateDoc(doc(db, 'users', user!.uid, 'novels', novelId!, 'episodes', ep.id), {
+          order: i + 1,
+        }).catch(() => {})
+      })
+      return prev
+    })
+  }
+
+  function handleTouchStart(e: React.TouchEvent, index: number) {
+    if (selectMode || q) return
+    e.stopPropagation()
+    touchDragRef.current = { fromIndex: index }
+    setTouchDragging(index)
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (!touchDragRef.current) return
+    const touch = e.touches[0]
+    const el = document.elementFromPoint(touch.clientX, touch.clientY)
+    const li = el?.closest('[data-ep-index]') as HTMLElement | null
+    if (!li) return
+    const targetIndex = parseInt(li.dataset.epIndex ?? '-1', 10)
+    if (targetIndex === -1 || targetIndex === touchDragRef.current.fromIndex) return
+    const from = touchDragRef.current.fromIndex
+    setEpisodes((prev) => {
+      const next = [...prev]
+      const [moved] = next.splice(from, 1)
+      next.splice(targetIndex, 0, moved)
+      return next.map((ep, i) => ({ ...ep, order: i + 1 }))
+    })
+    touchDragRef.current.fromIndex = targetIndex
+    setTouchDragging(targetIndex)
+  }
+
+  function handleTouchEnd() {
+    if (!touchDragRef.current) return
+    touchDragRef.current = null
+    setTouchDragging(null)
     if (!user || !novelId) return
     setEpisodes((prev) => {
       prev.forEach((ep, i) => {
@@ -406,6 +482,19 @@ export default function NovelPage() {
             </div>
           )
         })()}
+
+        {/* AI 리뷰 버튼 */}
+        {episodes.length > 0 && (
+          <div className="mb-4">
+            <button
+              onClick={() => { setReviewOpen(true); if (!reviewResult) handleAIReview() }}
+              disabled={isAILimitReached()}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-purple-200 bg-purple-50/60 px-4 py-2.5 text-sm font-medium text-purple-700 transition hover:bg-purple-100 disabled:opacity-40 dark:border-purple-800 dark:bg-purple-950/30 dark:text-purple-300 dark:hover:bg-purple-900/40"
+            >
+              <span>✦</span> AI 소설 리뷰
+            </button>
+          </div>
+        )}
 
         {/* 탭 */}
         <div className="mb-4 flex border-b border-gray-200 dark:border-gray-700">
@@ -589,11 +678,14 @@ export default function NovelPage() {
             {visible.map((ep, index) => (
               <li
                 key={ep.id}
+                data-ep-index={index}
                 draggable={!selectMode}
                 onDragStart={() => !selectMode && handleDragStart(index)}
                 onDragOver={(e) => !selectMode && handleDragOver(e, index)}
                 onDragEnd={() => !selectMode && handleDragEnd()}
-                className={`group flex cursor-pointer items-center gap-2 rounded-xl border bg-white px-4 py-3 hover:shadow-sm dark:bg-gray-800 ${
+                className={`group flex cursor-pointer items-center gap-2 rounded-xl border bg-white px-4 py-3 hover:shadow-sm dark:bg-gray-800 transition-opacity ${
+                  touchDragging === index ? 'opacity-40 scale-[0.98]' : ''
+                } ${
                   selectMode && selectedIds.has(ep.id)
                     ? 'border-indigo-400 dark:border-indigo-600'
                     : 'border-gray-200 dark:border-gray-700'
@@ -616,25 +708,18 @@ export default function NovelPage() {
                   />
                 ) : (
                   <>
-                    {/* 데스크탑: 드래그 핸들 (검색 중 숨김) */}
-                    {!q && <span
-                      onClick={(e) => e.stopPropagation()}
-                      className="hidden sm:inline cursor-grab text-gray-200 select-none dark:text-gray-700"
-                      aria-hidden="true"
-                    >⠿</span>}
-                    {/* 모바일: ↑↓ 순서 버튼 (검색 중 숨김) */}
-                    {!q && <div className="flex sm:hidden flex-col" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => handleMoveEpisode(ep.id, -1)}
-                        disabled={index === 0}
-                        className="rounded px-1 py-0.5 text-[10px] text-gray-300 hover:text-indigo-500 disabled:opacity-20 dark:text-gray-700"
-                      >▲</button>
-                      <button
-                        onClick={() => handleMoveEpisode(ep.id, 1)}
-                        disabled={index === visible.length - 1}
-                        className="rounded px-1 py-0.5 text-[10px] text-gray-300 hover:text-indigo-500 disabled:opacity-20 dark:text-gray-700"
-                      >▼</button>
-                    </div>}
+                    {/* 드래그 핸들 — 데스크탑: 마우스 드래그 / 모바일: 터치 드래그 */}
+                    {!q && (
+                      <span
+                        onClick={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => handleTouchStart(e, index)}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                        className="cursor-grab touch-none select-none text-gray-200 active:text-indigo-400 dark:text-gray-700"
+                        style={{ touchAction: 'none' }}
+                        aria-hidden="true"
+                      >⠿</span>
+                    )}
                   </>
                 )}
                 {editingEpId === ep.id ? (
@@ -722,6 +807,60 @@ export default function NovelPage() {
 
       {wizardOpen && (
         <WritingWizard onClose={() => setWizardOpen(false)} onCreate={handleWizardCreate} />
+      )}
+
+      {reviewOpen && (
+        <>
+          <div className="fixed inset-0 z-40 bg-gray-900/50" onClick={() => { reviewAbortRef.current?.abort(); setReviewOpen(false) }} />
+          <div className="fixed inset-x-4 bottom-4 top-16 z-50 flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 sm:inset-x-auto sm:left-1/2 sm:w-[560px] sm:-translate-x-1/2">
+            <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-700">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-800 dark:text-gray-100">AI 소설 리뷰</span>
+                <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-medium text-purple-600 dark:bg-purple-900/60 dark:text-purple-300">Gemini</span>
+              </div>
+              <button onClick={() => { reviewAbortRef.current?.abort(); setReviewOpen(false) }} className="rounded p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              {reviewing && !reviewResult && (
+                <div className="flex flex-col items-center justify-center gap-3 py-16">
+                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-purple-200 border-t-purple-500" />
+                  <p className="text-sm text-gray-400">소설 분석 중…</p>
+                </div>
+              )}
+              {reviewError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+                  {reviewError}
+                </div>
+              )}
+              {reviewResult && (
+                <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+                  {reviewResult}
+                  {reviewing && <span className="ml-0.5 inline-block h-3.5 w-px animate-pulse bg-current align-middle" />}
+                </div>
+              )}
+            </div>
+            {!reviewing && !reviewResult && !reviewError && (
+              <div className="shrink-0 border-t border-gray-100 p-4 dark:border-gray-700">
+                <button
+                  onClick={handleAIReview}
+                  className="w-full rounded-xl bg-purple-600 py-2.5 text-sm font-medium text-white hover:bg-purple-700"
+                >
+                  리뷰 시작
+                </button>
+              </div>
+            )}
+            {!reviewing && (reviewResult || reviewError) && (
+              <div className="shrink-0 border-t border-gray-100 p-4 dark:border-gray-700">
+                <button
+                  onClick={handleAIReview}
+                  className="w-full rounded-xl border border-purple-200 py-2.5 text-sm font-medium text-purple-600 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-950/40"
+                >
+                  다시 리뷰
+                </button>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   )

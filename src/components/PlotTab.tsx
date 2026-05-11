@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { callGemini, msg, isAILimitReached } from '@/lib/gemini'
 
 interface PlotItem {
   id: string
@@ -11,11 +12,20 @@ interface PlotItem {
 
 interface Props { uid: string; novelId: string }
 
+const PLOT_SYSTEM = `당신은 한국어 소설 분석 전문가입니다. 주어진 소설 내용을 분석하여 주요 플롯 포인트를 추출하세요.
+각 플롯 포인트는 한 문장으로 간결하게 작성하고, JSON 배열로만 반환하세요:
+["플롯 포인트 1", "플롯 포인트 2", ...]
+- 5~10개의 핵심 사건/전환점을 추출하세요
+- 시간 순서대로 정렬하세요
+- JSON 배열만 출력하고 다른 설명은 하지 마세요`
+
 export default function PlotTab({ uid, novelId }: Props) {
   const [items, setItems] = useState<PlotItem[]>([])
   const [newText, setNewText] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
+  const [analyzing, setAnalyzing] = useState(false)
+  const [analyzeError, setAnalyzeError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -56,6 +66,51 @@ export default function PlotTab({ uid, novelId }: Props) {
     setEditingId(null)
   }
 
+  async function handleAIAnalyze() {
+    if (isAILimitReached()) { setAnalyzeError('오늘의 AI 사용 한도를 초과했습니다.'); return }
+    setAnalyzing(true)
+    setAnalyzeError('')
+    try {
+      const epRef = collection(db, 'users', uid, 'novels', novelId, 'episodes')
+      const snap = await getDocs(query(epRef, orderBy('order', 'asc')))
+      const episodes = snap.docs.map((d) => d.data() as { summary?: string; excerpt?: string; content?: string; title?: string; order?: number })
+      if (episodes.length === 0) { setAnalyzeError('회차 내용이 없습니다. 먼저 소설을 작성해주세요.'); return }
+
+      const combined = episodes.slice(0, 10)
+        .map((ep, i) => {
+          const text = ep.summary ?? ep.excerpt ?? (ep.content ?? '').slice(0, 500)
+          return `${ep.title ?? `${i + 1}화`}: ${text}`
+        })
+        .join('\n')
+
+      const raw = await callGemini([msg('user', combined)], PLOT_SYSTEM)
+      const match = raw.match(/\[[\s\S]*\]/)
+      if (!match) throw new Error('AI 응답을 파싱할 수 없습니다.')
+
+      const parsed = JSON.parse(match[0]) as string[]
+      const valid = parsed.filter((p) => typeof p === 'string' && p.trim())
+      if (valid.length === 0) throw new Error('추출된 플롯이 없습니다.')
+
+      const existingTexts = new Set(items.map((p) => p.text))
+      const ref = collection(db, 'users', uid, 'novels', novelId, 'plotItems')
+      let nextOrder = items.length + 1
+      const added: PlotItem[] = []
+      for (const text of valid) {
+        if (existingTexts.has(text)) continue
+        const docRef = await addDoc(ref, {
+          text, done: false, order: nextOrder, createdAt: serverTimestamp(),
+        })
+        added.push({ id: docRef.id, text, done: false, order: nextOrder })
+        nextOrder++
+      }
+      setItems((prev) => [...prev, ...added])
+    } catch (e) {
+      setAnalyzeError((e as Error).message || 'AI 분석 중 오류가 발생했습니다.')
+    } finally {
+      setAnalyzing(false)
+    }
+  }
+
   const doneCount = items.filter((p) => p.done).length
 
   return (
@@ -75,10 +130,25 @@ export default function PlotTab({ uid, novelId }: Props) {
         </button>
       </form>
 
-      {items.length > 0 && (
-        <p className="mb-3 text-xs text-gray-400 dark:text-gray-600">
-          {doneCount}/{items.length} 완료{doneCount === items.length && items.length > 0 ? ' 🎉' : ''}
-        </p>
+      <div className="mb-3 flex items-center justify-between">
+        {items.length > 0 ? (
+          <p className="text-xs text-gray-400 dark:text-gray-600">
+            {doneCount}/{items.length} 완료{doneCount === items.length && items.length > 0 ? ' 🎉' : ''}
+          </p>
+        ) : <span />}
+        <button
+          onClick={handleAIAnalyze}
+          disabled={analyzing || isAILimitReached()}
+          className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-40 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300 dark:hover:bg-purple-900/60"
+        >
+          {analyzing ? '분석 중…' : 'AI 분석'}
+        </button>
+      </div>
+
+      {analyzeError && (
+        <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+          {analyzeError}
+        </div>
       )}
 
       {items.length === 0 && (

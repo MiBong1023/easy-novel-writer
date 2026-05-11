@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc, query, orderBy, serverTimestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { callGemini, msg, isAILimitReached } from '@/lib/gemini'
 
 const ROLES = ['주인공', '조연', '악당', '기타'] as const
 type Role = typeof ROLES[number]
@@ -20,9 +21,18 @@ interface Character {
   order: number
 }
 
+interface ExtractedChar { name: string; role: Role; description: string; selected: boolean }
+
 interface Props { uid: string; novelId: string }
 
 const EMPTY_FORM = { name: '', role: '주인공' as Role, description: '' }
+
+const EXTRACT_SYSTEM = `당신은 한국어 소설 분석 전문가입니다. 주어진 소설 본문에서 등장인물을 추출하여 JSON 배열로 반환하세요.
+각 인물에 대해 다음 형식으로 작성하세요:
+[{"name":"이름","role":"주인공|조연|악당|기타","description":"인물 설명 (외모, 성격, 특징 등)"}]
+- role은 반드시 주인공/조연/악당/기타 중 하나여야 합니다
+- 주인공은 1명만 선택하세요
+- JSON 배열만 출력하고 다른 설명은 하지 마세요`
 
 export default function CharactersTab({ uid, novelId }: Props) {
   const [chars, setChars] = useState<Character[]>([])
@@ -30,6 +40,9 @@ export default function CharactersTab({ uid, novelId }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [editForm, setEditForm] = useState(EMPTY_FORM)
+  const [extracting, setExtracting] = useState(false)
+  const [extracted, setExtracted] = useState<ExtractedChar[]>([])
+  const [extractError, setExtractError] = useState('')
 
   useEffect(() => {
     const ref = collection(db, 'users', uid, 'novels', novelId, 'characters')
@@ -71,16 +84,137 @@ export default function CharactersTab({ uid, novelId }: Props) {
     setEditingId(null)
   }
 
+  async function handleAIExtract() {
+    if (isAILimitReached()) { setExtractError('오늘의 AI 사용 한도를 초과했습니다.'); return }
+    setExtracting(true)
+    setExtractError('')
+    setExtracted([])
+    try {
+      const epRef = collection(db, 'users', uid, 'novels', novelId, 'episodes')
+      const snap = await getDocs(query(epRef, orderBy('order', 'asc')))
+      const episodes = snap.docs.map((d) => d.data() as { content?: string; title?: string; order?: number })
+      if (episodes.length === 0) { setExtractError('회차 내용이 없습니다. 먼저 소설을 작성해주세요.'); return }
+
+      const combined = episodes.slice(0, 5)
+        .map((ep, i) => `=== ${ep.title ?? `${i + 1}화`} ===\n${(ep.content ?? '').slice(0, 3000)}`)
+        .join('\n\n')
+
+      const raw = await callGemini([msg('user', combined)], EXTRACT_SYSTEM)
+      const match = raw.match(/\[[\s\S]*\]/)
+      if (!match) throw new Error('AI 응답을 파싱할 수 없습니다.')
+
+      const parsed = JSON.parse(match[0]) as Array<{ name: string; role: string; description: string }>
+      const existingNames = new Set(chars.map((c) => c.name))
+      const valid = parsed
+        .filter((p) => p.name && ROLES.includes(p.role as Role))
+        .map((p) => ({
+          name: p.name,
+          role: p.role as Role,
+          description: p.description ?? '',
+          selected: !existingNames.has(p.name),
+        }))
+
+      if (valid.length === 0) throw new Error('추출된 인물이 없습니다.')
+      setExtracted(valid)
+    } catch (e) {
+      setExtractError((e as Error).message || 'AI 추출 중 오류가 발생했습니다.')
+    } finally {
+      setExtracting(false)
+    }
+  }
+
+  async function saveExtracted() {
+    const toSave = extracted.filter((e) => e.selected)
+    if (toSave.length === 0) { setExtracted([]); return }
+    const existingNames = new Set(chars.map((c) => c.name))
+    const ref = collection(db, 'users', uid, 'novels', novelId, 'characters')
+    let nextOrder = chars.length + 1
+    const added: Character[] = []
+    for (const e of toSave) {
+      if (existingNames.has(e.name)) continue
+      const docRef = await addDoc(ref, {
+        name: e.name, role: e.role, description: e.description,
+        order: nextOrder, createdAt: serverTimestamp(),
+      })
+      added.push({ id: docRef.id, name: e.name, role: e.role, description: e.description, order: nextOrder })
+      nextOrder++
+    }
+    setChars((prev) => [...prev, ...added])
+    setExtracted([])
+  }
+
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
         <span className="text-sm text-gray-500 dark:text-gray-400">{chars.length}명</span>
-        {!adding && (
-          <button onClick={() => setAdding(true)} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700">
-            + 인물 추가
+        <div className="flex gap-2">
+          <button
+            onClick={handleAIExtract}
+            disabled={extracting || isAILimitReached()}
+            className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple-700 hover:bg-purple-100 disabled:opacity-40 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-300 dark:hover:bg-purple-900/60"
+          >
+            {extracting ? '분석 중…' : 'AI로 추출'}
           </button>
-        )}
+          {!adding && (
+            <button onClick={() => setAdding(true)} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700">
+              + 인물 추가
+            </button>
+          )}
+        </div>
       </div>
+
+      {extractError && (
+        <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+          {extractError}
+        </div>
+      )}
+
+      {extracted.length > 0 && (
+        <div className="mb-4 rounded-xl border border-purple-200 bg-purple-50/50 p-4 dark:border-purple-800 dark:bg-purple-950/30">
+          <p className="mb-3 text-sm font-medium text-purple-700 dark:text-purple-300">AI가 추출한 등장인물</p>
+          <ul className="space-y-2">
+            {extracted.map((e, i) => (
+              <li key={i} className="flex items-start gap-3">
+                <button
+                  type="button"
+                  onClick={() => setExtracted((prev) => prev.map((p, j) => j === i ? { ...p, selected: !p.selected } : p))}
+                  className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition ${
+                    e.selected ? 'border-purple-500 bg-purple-500 text-white' : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                >
+                  {e.selected && <span className="text-[10px] leading-none">✓</span>}
+                </button>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{e.name}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${ROLE_COLORS[e.role]}`}>{e.role}</span>
+                    {chars.some((c) => c.name === e.name) && (
+                      <span className="text-[10px] text-gray-400">이미 존재</span>
+                    )}
+                  </div>
+                  {e.description && (
+                    <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{e.description}</p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={saveExtracted}
+              className="rounded-lg bg-purple-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-purple-700"
+            >
+              선택 항목 저장
+            </button>
+            <button
+              onClick={() => setExtracted([])}
+              className="rounded-lg border border-gray-200 px-4 py-1.5 text-sm text-gray-500 dark:border-gray-600"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      )}
 
       {adding && (
         <form onSubmit={handleAdd} className="mb-4 space-y-3 rounded-xl border border-indigo-200 bg-indigo-50/50 p-4 dark:border-indigo-800 dark:bg-indigo-950/30">
@@ -98,7 +232,7 @@ export default function CharactersTab({ uid, novelId }: Props) {
         </form>
       )}
 
-      {chars.length === 0 && !adding && (
+      {chars.length === 0 && !adding && extracted.length === 0 && (
         <p className="mt-12 text-center text-sm text-gray-400 dark:text-gray-600">등장인물을 추가해보세요</p>
       )}
 
