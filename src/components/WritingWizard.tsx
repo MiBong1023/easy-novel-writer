@@ -14,6 +14,10 @@ type Step =
   | 'has_draft'
   | 'help_offer'
   | 'backbone'
+  | 'material_examples'
+  | 'ai_critique'
+  | 'writing_guide'
+  | 'hard_scene'
   | 'draft'
   | 'existing_paste'
   | 'existing_help'
@@ -66,32 +70,35 @@ const BACKBONE_QUESTIONS = [
   },
 ]
 
-// 문피아 웹소설 전용 뼈대 질문 (SKILL.md Phase 1/2 기반)
+// 문피아 웹소설 전용 뼈대 질문 (3가지)
 const BACKBONE_QUESTIONS_WEBNOVEL = [
   {
-    q: '서사 엔진: 독자가 다음 화에 100원을 내는 이유는 무엇인가요?',
-    hint: '핵심 아이러니나 정보 낙차 — 독자만 아는 것 vs 작중 인물이 모르는 것',
-    example: '예: "최강인데 아무도 안 믿어줘서 독자만 실제 실력을 아는 구조" / "회귀자만 아는 미래를 적들이 눈치채기 시작"',
-    badge: '서사 엔진',
+    q: '작품의 소재를 알려주세요',
+    hint: '어떤 배경과 상황에서 이야기가 펼쳐지나요?',
+    example: '예: 회귀, 재벌가, 현대 경제사, 헌터 세계관',
+    badge: '소재',
   },
   {
-    q: '주인공의 핵심 설정과 갈등은 무엇인가요?',
-    hint: '독자가 주인공을 응원하게 만드는 이유 — 능력, 성격, 상처, 목표',
-    example: '예: "회귀한 S급 헌터. 전생에서 동료에게 배신당한 분노가 동력. 차갑지만 약자엔 의리"',
-    badge: '주인공 설정',
+    q: '주인공이 특별한 이유는 무엇인가요?',
+    hint: '다른 인물과 구별되는 주인공만의 강점이나 비밀',
+    example: '예: 나만 아는 미래 지식, 오너 일가 내부자, 전생의 기억, 숨겨진 S급 능력',
+    badge: '주인공 특성',
   },
   {
-    q: '이 작품만의 성장/능력 시스템은 무엇인가요?',
-    hint: '레벨업? 회귀? 각성? 스킬? 이 작품만의 방식이 왜 특별한가요?',
-    example: '예: "죽을수록 강해지는 능력 — 실패가 곧 성장이 되는 역설" / "타인의 기억을 흡수해 성장"',
-    badge: '성장 시스템',
+    q: '작가님의 작품을 한 줄로 설명해주세요',
+    hint: '소재 + 주인공 + 목표를 이어서 한 문장으로',
+    example: '예: 흙수저 비서가 재벌가 막내아들로 회귀하여 가문의 몰락을 막는 이야기',
+    badge: '작품 한줄 요약',
   },
-  {
-    q: '25화(유료전환) 시점의 클리프행어는 무엇인가요?',
-    hint: '"여기서 끊기면 100원 내고서라도 봐야 하는" 사건 — 정체 노출, 최강 적 등장, 숨겨둔 능력 각성 등',
-    example: '예: "주인공 정체 노출 위기" / "전생의 숙적이 현생에 등장" / "숨겨둔 진짜 능력 첫 공개"',
-    badge: '유료전환 훅',
-  },
+]
+
+// 인기 소재 예시 (Q1 모르겠어요 선택 시)
+const POPULAR_MATERIALS = [
+  { id: '회귀물', desc: '죽거나 실패한 후 과거로 돌아가 다시 시작' },
+  { id: '재벌·경영', desc: '재벌가 인물에 빙의·회귀해 경영·권력 투쟁' },
+  { id: '헌터·각성', desc: '몬스터가 나타난 세계에서 능력 각성' },
+  { id: '로판·귀족', desc: '소설 속 귀족 세계에 빙의해 생존 도전' },
+  { id: '무협·강호', desc: '무림 세계에서 도약하는 고수의 이야기' },
 ]
 
 // 장르별 1화 훅 패턴 (references/hook-patterns.md 기반)
@@ -135,11 +142,12 @@ const PROGRESS_MAP: Partial<Record<Step, number>> = {
   purpose: 0, purpose_ai_explain: 0,
   format: 1, genre: 1, genre_first_time: 1, genre_ai_explain: 1,
   has_draft: 2, help_offer: 2,
-  backbone: 3,
-  draft: 4,
+  backbone: 3, material_examples: 3,
+  ai_critique: 4, writing_guide: 4, hard_scene: 4,
+  draft: 5,
   existing_paste: 2, existing_help: 3, existing_result: 4,
 }
-const TOTAL = 5
+const TOTAL = 6
 
 // ── Exported Types ─────────────────────────────────────────────────
 
@@ -187,6 +195,14 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
   const [aiExplain, setAiExplain] = useState(PURPOSE_AI_EXPLAIN)
   const [aiExplainStreaming, setAiExplainStreaming] = useState(false)
 
+  // AI critique
+  const [aiCritique, setAiCritique] = useState('')
+  const [aiCritiqueStreaming, setAiCritiqueStreaming] = useState(false)
+
+  // Writing path
+  const [hardScene, setHardScene] = useState('')
+  const [writingPath, setWritingPath] = useState<'easy' | 'hard' | ''>('')
+
   // Draft + refinement
   const [draft, setDraft] = useState('')
   const [draftStreaming, setDraftStreaming] = useState(false)
@@ -212,6 +228,15 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
       runExistingHelp()
     }
     prevStepEx.current = step
+  }, [step]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 'ai_critique' 단계 진입 시 자동 실행
+  const prevStepCritique = useRef<Step | null>(null)
+  useEffect(() => {
+    if (step === 'ai_critique' && prevStepCritique.current !== 'ai_critique' && !aiCritique && !aiCritiqueStreaming) {
+      generateAiCritique()
+    }
+    prevStepCritique.current = step
   }, [step]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── AI helpers ────────────────────────────────────────────────────
@@ -248,6 +273,28 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
     }
   }
 
+  async function generateAiCritique() {
+    setAiCritique('')
+    setAiCritiqueStreaming(true)
+    const boneQ = BACKBONE_QUESTIONS_WEBNOVEL
+    const boneCtx = backbone
+      .slice(0, boneQ.length)
+      .map((ans, i) => ans.trim() ? `${boneQ[i].badge}: ${ans}` : '')
+      .filter(Boolean)
+      .join('\n')
+    const prompt = `다음은 웹소설 기획안입니다:\n\n${boneCtx}${genreDetail ? `\n장르: ${genreDetail}` : ''}\n\n이 기획안의 강점과 독자 훅 관점에서 가능성을 평가해주세요. 개선 제안도 간단히 덧붙여주세요.`
+    try {
+      let acc = ''
+      await streamGemini(
+        [msg('user', prompt)],
+        '당신은 문피아 웹소설 전문 편집자입니다. 기획안을 3~5줄로 간결하게 평가해주세요. 강점 → 보완점 → ✅ 한줄 총평 순서로 작성하세요.',
+        (chunk) => { acc += chunk; setAiCritique(acc) },
+      )
+    } finally {
+      setAiCritiqueStreaming(false)
+    }
+  }
+
   async function generateDraft() {
     abortRef.current?.abort()
     const ctrl = new AbortController()
@@ -260,22 +307,38 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
     const hookHint = isWebnovel && genreDetail && GENRE_HOOKS[genreDetail]
       ? `\n장르 훅 패턴 참고: ${GENRE_HOOKS[genreDetail]}`
       : ''
-    const systemPrompt = isWebnovel
-      ? `당신은 문피아 웹소설 전문 작가입니다. ${ctx} 장르의 웹소설 1화를 작성합니다.
+
+    let systemPrompt: string
+    if (isWebnovel && writingPath === 'hard') {
+      systemPrompt = `당신은 문피아 웹소설 전문 작가입니다. ${ctx} 장르의 웹소설 1화를 승-전-결-기 구조로 작성합니다.
+[승] 배경 — 사건이 일어나게 된 맥락과 이유
+[전] 핵심 장면 — 주인공이 맞닥뜨리는 고난과 위기
+[결] 해결 — 주인공이 얻는 보상·변화
+[기] 후킹 — 다음 화가 궁금해지는 한 방${hookHint}
+- 분량: 800~1200자 내외
+- 빠른 전개, 사건 중심, 내면 독백 최소화
+- 마지막 문장은 강한 컷포인트
+- 이야기 텍스트만 출력하세요 (메타 설명 없이)`
+    } else if (isWebnovel) {
+      systemPrompt = `당신은 문피아 웹소설 전문 작가입니다. ${ctx} 장르의 웹소설 1화를 작성합니다.
 문피아 편당결제 환경에서 독자가 2화를 바로 클릭하게 만드는 강한 훅으로 시작하세요.${hookHint}
 - 분량: 800~1200자 내외 (1화 도입부 분량)
 - 빠른 전개, 사건 중심, 내면 독백 최소화
 - 마지막 문장은 다음 화가 궁금해지는 컷포인트로 마무리
 - 이야기 텍스트만 출력하세요 (메타 설명 없이)`
-      : `당신은 한국 소설 전문 작가입니다. ${ctx} 장르의 소설 첫 장면을 작성합니다.
+    } else {
+      systemPrompt = `당신은 한국 소설 전문 작가입니다. ${ctx} 장르의 소설 첫 장면을 작성합니다.
 독자의 흥미를 사로잡는 도입부로 시작하세요. 자연스러운 소설체로 600~1000자 내외로 작성하세요.
 이야기 텍스트만 출력하세요 (메타 설명 없이).`
+    }
 
+    const boneQuestions = isWebnovel ? BACKBONE_QUESTIONS_WEBNOVEL : BACKBONE_QUESTIONS
     const boneCtx = backbone
-      .map((ans, i) => ans.trim() ? `${BACKBONE_QUESTIONS[i].badge}: ${ans}` : '')
+      .slice(0, boneQuestions.length)
+      .map((ans, i) => ans.trim() ? `${boneQuestions[i].badge}: ${ans}` : '')
       .filter(Boolean).join('\n')
     const prompt = boneCtx
-      ? `다음 작품 뼈대를 바탕으로 첫 장면을 작성해주세요:\n${boneCtx}${title ? `\n제목: ${title}` : ''}`
+      ? `다음 작품 뼈대를 바탕으로 첫 장면을 작성해주세요:\n${boneCtx}${writingPath === 'hard' && hardScene ? `\n핵심 사건: ${hardScene}` : ''}${title ? `\n제목: ${title}` : ''}`
       : `${ctx} 장르의 흥미로운 첫 장면을 작성해주세요.`
 
     const userMsg = msg('user', prompt)
@@ -411,7 +474,6 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
     <Shell onClose={onClose} progress={progress} onBack={goBack}>
       <StepHeader title="생각해둔 장르가 있나요?" sub="장르를 선택하면 맞춤 초안을 만들어드려요" />
       <div className="flex-1 overflow-y-auto p-6 space-y-5">
-        {/* 남성향 */}
         <div>
           <p className="mb-2 text-xs font-semibold text-gray-500 dark:text-gray-400">남성향</p>
           <div className="space-y-1.5">
@@ -421,7 +483,6 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
             ))}
           </div>
         </div>
-        {/* 여성향 */}
         <div>
           <p className="mb-2 text-xs font-semibold text-gray-500 dark:text-gray-400">여성향</p>
           <div className="space-y-1.5">
@@ -431,7 +492,6 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
             ))}
           </div>
         </div>
-        {/* 모르겠어요 */}
         <button
           onClick={() => goTo('genre_first_time')}
           className="w-full rounded-xl border border-dashed border-gray-300 py-3 text-sm text-gray-400 hover:border-indigo-300 hover:text-indigo-500 dark:border-gray-600 dark:hover:border-indigo-700"
@@ -603,7 +663,7 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
         <BigButton
           onClick={() => { setBoneIdx(0); setBoneInput(''); goTo('backbone') }}
           icon="🤖" label="네, 함께 만들어주세요"
-          sub={format === '웹소설' ? '서사 엔진·훅·유료전환까지 4가지 질문으로 설계' : '4가지 질문으로 작품 뼈대 구성'}
+          sub={format === '웹소설' ? '소재·주인공·한줄 요약 3가지 질문으로 설계' : '4가지 질문으로 작품 뼈대 구성'}
         />
         <BigButton
           onClick={() => { setDraft(''); handleCreate('') }}
@@ -614,18 +674,24 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
     </Shell>
   )
 
-  // Step 3-3: 뼈대 만들기 (4가지 질문 — 웹소설 경로는 문피아 전용 질문 사용)
+  // Step 3-3: 뼈대 만들기
   if (step === 'backbone') {
     const boneQuestions = format === '웹소설' ? BACKBONE_QUESTIONS_WEBNOVEL : BACKBONE_QUESTIONS
     const q = boneQuestions[boneIdx]
     const isLast = boneIdx === boneQuestions.length - 1
+    const isWebnovel = format === '웹소설'
 
     function saveBoneAndNext() {
       const updated = backbone.map((v, i) => i === boneIdx ? boneInput.trim() : v)
       setBackbone(updated)
       if (isLast) {
-        setDraft('')
-        goTo('draft')
+        if (isWebnovel) {
+          setAiCritique('')
+          goTo('ai_critique')
+        } else {
+          setDraft('')
+          goTo('draft')
+        }
       } else {
         setBoneIdx(boneIdx + 1)
         setBoneInput(backbone[boneIdx + 1] ?? '')
@@ -642,7 +708,6 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
 
     return (
       <Shell onClose={onClose} progress={progress} onBack={backBone}>
-        {/* 진행 표시 */}
         <div className="shrink-0 border-b border-gray-100 px-6 pt-6 pb-4 dark:border-gray-700">
           <div className="flex items-center gap-1.5 mb-3">
             {boneQuestions.map((_, i) => (
@@ -674,18 +739,26 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
             onClick={saveBoneAndNext}
             className="w-full rounded-xl bg-indigo-600 py-3 font-medium text-white hover:bg-indigo-700"
           >
-            {isLast ? '✨ 초안 생성하기' : `다음 (${boneIdx + 1}/${boneQuestions.length}) →`}
+            {isLast
+              ? (isWebnovel ? '✨ AI 감평 받기' : '✨ 초안 생성하기')
+              : `다음 (${boneIdx + 1}/${boneQuestions.length}) →`}
           </button>
           {boneInput.trim() === '' && (
             <button
               onClick={() => {
-                const updated = backbone.map((v, i) => i === boneIdx ? '' : v)
-                setBackbone(updated)
-                saveBoneAndNext()
+                if (boneIdx === 0 && isWebnovel) {
+                  goTo('material_examples')
+                } else {
+                  saveBoneAndNext()
+                }
               }}
-              className="w-full rounded-xl border border-gray-200 py-2.5 text-sm text-gray-400 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+              className={`w-full rounded-xl border py-2.5 text-sm transition ${
+                boneIdx === 0 && isWebnovel
+                  ? 'border-indigo-200 bg-indigo-50 text-indigo-500 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-400'
+                  : 'border-gray-200 text-gray-400 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800'
+              }`}
             >
-              건너뛰기
+              {boneIdx === 0 && isWebnovel ? '모르겠어요 — 인기 소재 보기' : '건너뛰기'}
             </button>
           )}
         </div>
@@ -693,7 +766,179 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
     )
   }
 
-  // Step 3-4/3-5: 초안 생성 + 수정 루프
+  // 인기 소재 예시 (Q1 모르겠어요)
+  if (step === 'material_examples') return (
+    <Shell onClose={onClose} progress={progress} onBack={goBack}>
+      <StepHeader title="인기 소재를 골라보세요" sub="마음에 드는 소재를 선택하면 바로 다음 질문으로 넘어가요" />
+      <div className="flex-1 overflow-y-auto p-6 space-y-2">
+        {POPULAR_MATERIALS.map(({ id, desc }) => (
+          <button
+            key={id}
+            onClick={() => {
+              const updated = backbone.map((v, i) => i === 0 ? id : v)
+              setBackbone(updated)
+              setBoneIdx(1)
+              setBoneInput(updated[1] ?? '')
+              setStepStack(p => p.slice(0, -1))
+            }}
+            className="w-full rounded-xl border border-gray-200 p-4 text-left transition hover:border-indigo-300 hover:bg-indigo-50 dark:border-gray-700 dark:hover:border-indigo-700 dark:hover:bg-indigo-950/40"
+          >
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{id}</p>
+            <p className="mt-0.5 text-xs text-gray-400">{desc}</p>
+          </button>
+        ))}
+        <button
+          onClick={() => setStepStack(p => p.slice(0, -1))}
+          className="w-full rounded-xl border border-dashed border-gray-300 py-3 text-sm text-gray-400 hover:border-indigo-300 hover:text-indigo-500 dark:border-gray-600 dark:hover:border-indigo-700"
+        >
+          직접 입력할게요
+        </button>
+      </div>
+    </Shell>
+  )
+
+  // AI 감평 (backbone 완료 후 — 웹소설 경로)
+  if (step === 'ai_critique') return (
+    <Shell onClose={onClose} progress={progress} onBack={goBack}>
+      <StepHeader
+        title="AI 감평"
+        sub={aiCritiqueStreaming ? 'AI가 기획안을 분석하는 중이에요…' : aiCritique ? '기획안 평가가 완료됐어요' : ''}
+      />
+      <div className="flex-1 overflow-y-auto p-6">
+        {!aiCritique && aiCritiqueStreaming && (
+          <div className="flex flex-col items-center justify-center gap-3 h-32">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-purple-200 border-t-purple-500" />
+            <p className="text-xs text-gray-400">기획안 분석 중…</p>
+          </div>
+        )}
+        {aiCritique && (
+          <div className="rounded-xl border border-purple-100 bg-purple-50 p-4 text-sm leading-relaxed whitespace-pre-wrap text-gray-700 dark:border-purple-900 dark:bg-purple-950/40 dark:text-gray-300">
+            {aiCritique}
+            {aiCritiqueStreaming && <span className="ml-0.5 inline-block h-3.5 w-px animate-pulse bg-purple-400 align-middle" />}
+          </div>
+        )}
+      </div>
+      {!aiCritiqueStreaming && aiCritique && (
+        <div className="shrink-0 border-t border-gray-100 px-6 py-4 dark:border-gray-700">
+          <button
+            onClick={() => goTo('writing_guide')}
+            className="w-full rounded-xl bg-indigo-600 py-3 font-medium text-white hover:bg-indigo-700"
+          >
+            계속하기 →
+          </button>
+        </div>
+      )}
+    </Shell>
+  )
+
+  // 작성 안내 (승-전-결-기 설명 + 어려워요/알았어요)
+  if (step === 'writing_guide') return (
+    <Shell onClose={onClose} progress={progress} onBack={goBack}>
+      <StepHeader title="첫 화 작성 안내" sub="문피아 표준 5,000자 기준 구성이에요" />
+      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 space-y-3">
+          <p className="font-semibold text-gray-800 dark:text-gray-100">이야기의 중심은 언제나 주인공이에요.</p>
+          <div className="space-y-2.5">
+            <div className="flex items-start gap-3">
+              <span className="shrink-0 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-600 dark:bg-indigo-900/60 dark:text-indigo-400">승</span>
+              <span><strong>앞부분</strong> — 그 사건이 일어나게 된 배경과 이유</span>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="shrink-0 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-600 dark:bg-orange-900/60 dark:text-orange-400">전</span>
+              <span><strong>핵심 장면</strong> — 주인공이 맞닥뜨리는 고난과 위기</span>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:bg-emerald-900/60 dark:text-emerald-400">결</span>
+              <span><strong>마무리</strong> — 해결 과정과 주인공이 얻는 보상·변화</span>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="shrink-0 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-600 dark:bg-rose-900/60 dark:text-rose-400">기</span>
+              <span><strong>마지막 한 방</strong> — 다음 화가 궁금해지는 장치 (후킹)</span>
+            </div>
+          </div>
+        </div>
+        <p className="text-xs text-center text-gray-400">이 구조로 초안을 생성해드릴까요?</p>
+      </div>
+      <div className="shrink-0 border-t border-gray-100 px-6 py-4 dark:border-gray-700 space-y-2">
+        <button
+          onClick={() => {
+            setWritingPath('easy')
+            setDraft('')
+            goTo('draft')
+          }}
+          className="w-full rounded-xl bg-indigo-600 py-3 font-medium text-white hover:bg-indigo-700"
+        >
+          알았어요, 바로 써줘요 →
+        </button>
+        <button
+          onClick={() => {
+            setHardScene('')
+            goTo('hard_scene')
+          }}
+          className="w-full rounded-xl border border-gray-200 py-2.5 text-sm text-gray-500 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+        >
+          어려워요, 더 알려주세요
+        </button>
+      </div>
+    </Shell>
+  )
+
+  // 어려워요 경로: 핵심 사건 입력
+  if (step === 'hard_scene') return (
+    <Shell onClose={onClose} progress={progress} onBack={goBack}>
+      <StepHeader
+        title="이번 화의 핵심 사건"
+        sub="주인공이 맞닥뜨리는 고난이나 핵심 사건을 한 줄로 알려주세요"
+      />
+      <div className="flex-1 flex flex-col p-6 gap-3">
+        <div className="rounded-xl border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-300 space-y-1">
+          <p>예시: "회사 면접에서 탈락하고 빗속에서 교통사고를 당해 회귀한다"</p>
+          <p>예시: "첫 출근 날 상사에게 무시당하고 비밀 능력이 각성한다"</p>
+        </div>
+        <textarea
+          autoFocus
+          value={hardScene}
+          onChange={(e) => setHardScene(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && e.metaKey) {
+              setWritingPath('hard')
+              setDraft('')
+              goTo('draft')
+            }
+          }}
+          placeholder="이번 화에서 주인공이 맞닥뜨리는 고난이나 핵심 사건…"
+          rows={4}
+          className="flex-1 w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-relaxed placeholder:text-gray-300 focus:border-indigo-400 focus:outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:placeholder:text-gray-600"
+        />
+      </div>
+      <div className="shrink-0 border-t border-gray-100 px-6 py-4 dark:border-gray-700 space-y-2">
+        <button
+          onClick={() => {
+            setWritingPath('hard')
+            setDraft('')
+            goTo('draft')
+          }}
+          disabled={!hardScene.trim()}
+          className="w-full rounded-xl bg-indigo-600 py-3 font-medium text-white hover:bg-indigo-700 disabled:opacity-40"
+        >
+          ✨ 초안 생성하기
+        </button>
+        <button
+          onClick={() => {
+            setWritingPath('hard')
+            setHardScene('')
+            setDraft('')
+            goTo('draft')
+          }}
+          className="w-full rounded-xl border border-gray-200 py-2.5 text-sm text-gray-400 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+        >
+          건너뛰고 바로 생성
+        </button>
+      </div>
+    </Shell>
+  )
+
+  // Step: 초안 생성 + 수정 루프
   if (step === 'draft') return (
     <Shell onClose={onClose} progress={progress} onBack={goBack}>
       <StepHeader
@@ -711,7 +956,6 @@ export default function WritingWizard({ onClose, onCreate }: Props) {
         }
       />
 
-      {/* 제목 입력 */}
       {!draftStreaming && !draft && (
         <div className="shrink-0 px-6 pb-4">
           <input
@@ -784,18 +1028,15 @@ function Shell({
       <div
         className="relative flex w-full flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 sm:max-w-lg h-[92dvh] sm:h-auto sm:max-h-[90vh]"
       >
-        {/* 모바일 드래그 핸들 */}
         <div className="flex justify-center pt-2.5 pb-0 sm:hidden shrink-0">
           <div className="h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600" />
         </div>
-        {/* 진행 바 */}
         <div className="absolute left-0 top-0 z-10 h-1 w-full overflow-hidden rounded-t-2xl bg-gray-100 dark:bg-gray-800">
           <div
             className="h-full bg-indigo-500 transition-all duration-500"
             style={{ width: `${(progress / TOTAL) * 100}%` }}
           />
         </div>
-        {/* 뒤로가기 */}
         {onBack && (
           <button
             onClick={onBack}
@@ -804,7 +1045,6 @@ function Shell({
             ← 뒤로
           </button>
         )}
-        {/* 닫기 */}
         <button
           onClick={onClose}
           className="absolute right-4 top-4 z-10 rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
